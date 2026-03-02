@@ -1,0 +1,28 @@
+# SIMagang - Sistem Informasi Magang
+
+## File yang diabaikan oleh Git
+
+# Config database (sensitif)
+config/config.php
+
+# Folder uploads (file user)
+uploads/
+
+# Cache & logs
+cache/
+logs/
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependencies
+vendor/
+node_modules/
