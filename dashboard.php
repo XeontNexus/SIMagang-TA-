@@ -17,9 +17,10 @@ $user = $db->single();
 // Check if profile is incomplete (for first login notification)
 $profileIncomplete = empty($user['institusi']) || empty($user['no_hp']) || empty($user['jurusan_id']) || empty($user['alamat_magang']);
 $showProfileModal = false;
-if($profileIncomplete && !isset($_SESSION['profile_modal_shown'])) {
+if($profileIncomplete && !isset($_SESSION['profile_completed'])) {
     $showProfileModal = true;
-    $_SESSION['profile_modal_shown'] = true;
+} elseif(!$profileIncomplete) {
+    $_SESSION['profile_completed'] = true;
 }
 
 // Dashboard statistics
