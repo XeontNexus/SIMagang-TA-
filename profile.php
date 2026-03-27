@@ -5,10 +5,11 @@ requireAuth();
 $db = new Database();
 $user_id = $_SESSION['user_id'];
 
-// Get user data with jurusan and kelas
-$db->query('SELECT u.*, k.nama_kelas as kelas_nama, j.nama_jurusan FROM users u 
+// Get user data with jurusan, kelas and guru
+$db->query('SELECT u.*, k.nama_kelas as kelas_nama, j.nama_jurusan, g.nama_guru as guru_nama FROM users u 
             LEFT JOIN kelas k ON u.kelas_id = k.id 
             LEFT JOIN jurusan j ON u.jurusan_id = j.id 
+            LEFT JOIN guru_pembimbing g ON u.guru_pembimbing_id = g.id 
             WHERE u.id = :id');
 $db->bind(':id', $user_id);
 $user = $db->single();
@@ -21,7 +22,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $nama_lengkap = $_POST['nama_lengkap'];
         $email = $_POST['email'];
         $no_hp = $_POST['no_hp'];
-        $guru_pembimbing = $_POST['guru_pembimbing'] ?? '';
+        $guru_pembimbing_id = $_POST['guru_pembimbing_id'] ?? null;
         $kelas_id = $_POST['kelas_id'] ?? null;
         $jurusan_id = $_POST['jurusan_id'] ?? null;
         $gmap_link = $_POST['gmap_link'] ?? '';
@@ -29,21 +30,34 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $telp_pendamping = $_POST['telp_pendamping'] ?? '';
         
         $alamat_magang = $_POST['alamat_magang'] ?? '';
+        $alamat_sekolah = $_POST['alamat_sekolah'] ?? '';
+        $tanggal_mulai = $_POST['tanggal_mulai'] ?? null;
+        $tanggal_selesai = $_POST['tanggal_selesai'] ?? null;
         
-        $db->query('UPDATE users SET nama_lengkap = :nama_lengkap, email = :email, no_hp = :no_hp, 
-                    guru_pembimbing = :guru_pembimbing, kelas_id = :kelas_id, jurusan_id = :jurusan_id,
-                    gmap_link = :gmap_link, alamat_magang = :alamat_magang, pendamping_lapangan = :pendamping_lapangan, telp_pendamping = :telp_pendamping 
-                    WHERE id = :id');
+        if ($user['role'] === 'admin') {
+            $db->query('UPDATE users SET nama_lengkap = :nama_lengkap, email = :email, no_hp = :no_hp, 
+                        alamat_sekolah = :alamat_sekolah 
+                        WHERE id = :id');
+            $db->bind(':alamat_sekolah', $alamat_sekolah);
+        } else {
+            $db->query('UPDATE users SET nama_lengkap = :nama_lengkap, email = :email, no_hp = :no_hp, 
+                        guru_pembimbing_id = :guru_pembimbing_id, kelas_id = :kelas_id, jurusan_id = :jurusan_id,
+                        gmap_link = :gmap_link, alamat_magang = :alamat_magang, pendamping_lapangan = :pendamping_lapangan, telp_pendamping = :telp_pendamping,
+                        tanggal_mulai = :tanggal_mulai, tanggal_selesai = :tanggal_selesai 
+                        WHERE id = :id');
+            $db->bind(':guru_pembimbing_id', $guru_pembimbing_id);
+            $db->bind(':kelas_id', $kelas_id);
+            $db->bind(':jurusan_id', $jurusan_id);
+            $db->bind(':gmap_link', $gmap_link);
+            $db->bind(':alamat_magang', $alamat_magang);
+            $db->bind(':pendamping_lapangan', $pendamping_lapangan);
+            $db->bind(':telp_pendamping', $telp_pendamping);
+            $db->bind(':tanggal_mulai', $tanggal_mulai);
+            $db->bind(':tanggal_selesai', $tanggal_selesai);
+        }
         $db->bind(':nama_lengkap', $nama_lengkap);
         $db->bind(':email', $email);
         $db->bind(':no_hp', $no_hp);
-        $db->bind(':guru_pembimbing', $guru_pembimbing);
-        $db->bind(':kelas_id', $kelas_id);
-        $db->bind(':jurusan_id', $jurusan_id);
-        $db->bind(':gmap_link', $gmap_link);
-        $db->bind(':alamat_magang', $alamat_magang);
-        $db->bind(':pendamping_lapangan', $pendamping_lapangan);
-        $db->bind(':telp_pendamping', $telp_pendamping);
         $db->bind(':id', $user_id);
         
         if($db->execute()) {
@@ -178,6 +192,7 @@ include 'includes/header.php';
                             <span>No. HP</span>
                             <strong><?= htmlspecialchars($user['no_hp'] ?: '-') ?></strong>
                         </li>
+                        <?php if($user['role'] === 'student'): ?>
                         <li class="list-group-item d-flex justify-content-between">
                             <span>Jurusan</span>
                             <strong><?= htmlspecialchars($user['nama_jurusan'] ?: '-') ?></strong>
@@ -185,6 +200,10 @@ include 'includes/header.php';
                         <li class="list-group-item d-flex justify-content-between">
                             <span>Kelas</span>
                             <strong><?= htmlspecialchars($user['kelas_nama'] ?: '-') ?></strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Guru Pembimbing</span>
+                            <strong><?= htmlspecialchars($user['guru_nama'] ?: '-') ?></strong>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
                             <span>Pendamping Lapangan</span>
@@ -198,6 +217,13 @@ include 'includes/header.php';
                             <span>Alamat Magang</span>
                             <strong><?= htmlspecialchars($user['alamat_magang'] ?: '-') ?></strong>
                         </li>
+                        <?php endif; ?>
+                        <?php if($user['role'] === 'admin'): ?>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Alamat Sekolah</span>
+                            <strong><?= htmlspecialchars($user['alamat_sekolah'] ?: '-') ?></strong>
+                        </li>
+                        <?php endif; ?>
                     </ul>
                     <?php if($user['gmap_link']): ?>
                     <div class="mt-3">
@@ -213,32 +239,38 @@ include 'includes/header.php';
         <div class="col-lg-8">
             <!-- Edit Profile Form -->
             <div class="card shadow mb-4">
-                <div class="card-header py-3">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
                     <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-user-edit me-2"></i>Edit Profil
+                        <i class="fas fa-user me-2"></i>Profil
                     </h6>
+                    <button type="button" id="btnEditProfile" class="btn btn-primary btn-sm" onclick="enableEditProfile()">
+                        <i class="fas fa-edit me-2"></i>Edit Profil
+                    </button>
+                    <button type="button" id="btnCancelEdit" class="btn btn-secondary btn-sm d-none" onclick="cancelEditProfile()">
+                        <i class="fas fa-times me-2"></i>Batal
+                    </button>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="">
+                    <form method="POST" action="" id="profileForm">
                         <input type="hidden" name="action" value="update_profile">
                         
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Nama Lengkap</label>
-                                <input type="text" name="nama_lengkap" class="form-control" required 
-                                       value="<?= htmlspecialchars($user['nama_lengkap']) ?>">
+                                <input type="text" name="nama_lengkap" class="form-control profile-input" required 
+                                       value="<?= htmlspecialchars($user['nama_lengkap']) ?>" disabled>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Email</label>
-                                <input type="email" name="email" class="form-control" required 
-                                       value="<?= htmlspecialchars($user['email']) ?>">
+                                <input type="email" name="email" class="form-control profile-input" required 
+                                       value="<?= htmlspecialchars($user['email']) ?>" disabled>
                             </div>
                         </div>
                         
                         <div class="mb-3">
                             <label class="form-label">No. HP</label>
-                            <input type="text" name="no_hp" class="form-control" 
-                                   value="<?= htmlspecialchars($user['no_hp'] ?: '') ?>">
+                            <input type="text" name="no_hp" class="form-control profile-input" 
+                                   value="<?= htmlspecialchars($user['no_hp'] ?: '') ?>" disabled>
                         </div>
                         
                         <?php if($user['role'] === 'student'): ?>
@@ -248,15 +280,25 @@ include 'includes/header.php';
                         $jurusanList = $db->resultSet();
                         $db->query('SELECT * FROM kelas ORDER BY nama_kelas ASC');
                         $kelasList = $db->resultSet();
+                        $db->query('SELECT * FROM guru_pembimbing WHERE status = "active" ORDER BY nama_guru ASC');
+                        $guruList = $db->resultSet();
+                        
+                        // Get current guru info
+                        $currentGuru = null;
+                        if($user['guru_pembimbing_id']) {
+                            $db->query('SELECT * FROM guru_pembimbing WHERE id = :id');
+                            $db->bind(':id', $user['guru_pembimbing_id']);
+                            $currentGuru = $db->single();
+                        }
                         ?>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Institusi</label>
-                                <input type="text" class="form-control" value="<?= htmlspecialchars($user['institusi'] ?: '-') ?>" readonly>
+                                <input type="text" class="form-control" value="<?= htmlspecialchars($user['institusi'] ?: '-') ?>" readonly disabled>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Jurusan</label>
-                                <select name="jurusan_id" class="form-select">
+                                <select name="jurusan_id" class="form-select profile-input" disabled>
                                     <option value="">- Pilih Jurusan -</option>
                                     <?php foreach($jurusanList as $j): ?>
                                     <option value="<?= $j['id'] ?>" <?= ($user['jurusan_id'] == $j['id']) ? 'selected' : '' ?>>
@@ -268,22 +310,28 @@ include 'includes/header.php';
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Link Google Maps Tempat Magang <span class="text-danger">*</span></label>
-                            <input type="url" name="gmap_link" class="form-control" required 
-                                   value="<?= htmlspecialchars($user['gmap_link'] ?: '') ?>" placeholder="https://maps.google.com/...">
+                            <input type="url" name="gmap_link" class="form-control profile-input" required 
+                                   value="<?= htmlspecialchars($user['gmap_link'] ?: '') ?>" placeholder="https://maps.google.com/..." disabled>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Alamat Tempat Magang <span class="text-danger">*</span></label>
-                            <textarea name="alamat_magang" class="form-control" rows="2" required placeholder="Alamat lengkap tempat magang"><?= htmlspecialchars($user['alamat_magang'] ?: '') ?></textarea>
+                            <textarea name="alamat_magang" class="form-control profile-input" rows="2" required placeholder="Alamat lengkap tempat magang" disabled><?= htmlspecialchars($user['alamat_magang'] ?: '') ?></textarea>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Guru Pembimbing</label>
-                                <input type="text" name="guru_pembimbing" class="form-control" 
-                                       value="<?= htmlspecialchars($user['guru_pembimbing'] ?: '') ?>">
+                                <select name="guru_pembimbing_id" class="form-select profile-input" disabled>
+                                    <option value="">- Pilih Guru Pembimbing -</option>
+                                    <?php foreach($guruList as $g): ?>
+                                    <option value="<?= $g['id'] ?>" <?= ($user['guru_pembimbing_id'] == $g['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($g['nama_guru']) ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Kelas</label>
-                                <select name="kelas_id" class="form-select">
+                                <select name="kelas_id" class="form-select profile-input" disabled>
                                     <option value="">- Pilih Kelas -</option>
                                     <?php foreach($kelasList as $k): ?>
                                     <option value="<?= $k['id'] ?>" <?= ($user['kelas_id'] == $k['id']) ? 'selected' : '' ?>>
@@ -296,31 +344,63 @@ include 'includes/header.php';
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Pendamping Lapangan</label>
-                                <input type="text" name="pendamping_lapangan" class="form-control" 
-                                       value="<?= htmlspecialchars($user['pendamping_lapangan'] ?: '') ?>">
+                                <input type="text" name="pendamping_lapangan" class="form-control profile-input" 
+                                       value="<?= htmlspecialchars($user['pendamping_lapangan'] ?: '') ?>" disabled>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">No. Telp Pendamping</label>
-                                <input type="text" name="telp_pendamping" class="form-control" 
-                                       value="<?= htmlspecialchars($user['telp_pendamping'] ?: '') ?>">
+                                <input type="text" name="telp_pendamping" class="form-control profile-input" 
+                                       value="<?= htmlspecialchars($user['telp_pendamping'] ?: '') ?>" disabled>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Tanggal Mulai</label>
-                                <input type="text" class="form-control" value="<?= $user['tanggal_mulai'] ? formatTanggalIndo($user['tanggal_mulai']) : '-' ?>" readonly>
+                                <input type="date" name="tanggal_mulai" class="form-control profile-input" 
+                                       value="<?= htmlspecialchars($user['tanggal_mulai'] ?: '') ?>" disabled>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Tanggal Selesai</label>
-                                <input type="text" class="form-control" value="<?= $user['tanggal_selesai'] ? formatTanggalIndo($user['tanggal_selesai']) : '-' ?>" readonly>
+                                <input type="date" name="tanggal_selesai" class="form-control profile-input" 
+                                       value="<?= htmlspecialchars($user['tanggal_selesai'] ?: '') ?>" disabled>
                             </div>
                         </div>
                         <?php endif; ?>
                         
-                        <button type="submit" class="btn btn-primary">
+                        <?php if($user['role'] === 'admin'): ?>
+                        <div class="mb-3">
+                            <label class="form-label">Alamat Sekolah</label>
+                            <textarea name="alamat_sekolah" class="form-control profile-input" rows="2" placeholder="Alamat sekolah/institusi" disabled><?= htmlspecialchars($user['alamat_sekolah'] ?? '') ?></textarea>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <button type="submit" id="btnSaveProfile" class="btn btn-success d-none">
                             <i class="fas fa-save me-2"></i>Simpan Perubahan
                         </button>
                     </form>
+                    
+                    <script>
+                        function enableEditProfile() {
+                            const inputs = document.querySelectorAll('.profile-input');
+                            inputs.forEach(input => input.disabled = false);
+                            
+                            document.getElementById('btnEditProfile').classList.add('d-none');
+                            document.getElementById('btnCancelEdit').classList.remove('d-none');
+                            document.getElementById('btnSaveProfile').classList.remove('d-none');
+                        }
+                        
+                        function cancelEditProfile() {
+                            const inputs = document.querySelectorAll('.profile-input');
+                            inputs.forEach(input => input.disabled = true);
+                            
+                            document.getElementById('btnEditProfile').classList.remove('d-none');
+                            document.getElementById('btnCancelEdit').classList.add('d-none');
+                            document.getElementById('btnSaveProfile').classList.add('d-none');
+                            
+                            // Reset form to original values
+                            document.getElementById('profileForm').reset();
+                        }
+                    </script>
                 </div>
             </div>
             

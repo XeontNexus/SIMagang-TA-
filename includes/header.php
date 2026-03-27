@@ -240,15 +240,9 @@
                 </a>
             </div>
             <div class="nav-item">
-                <a href="jurusan.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'jurusan.php' ? 'active' : '' ?>">
-                    <i class="fas fa-graduation-cap"></i>
-                    <span>Kelola Jurusan</span>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a href="kelas.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'kelas.php' ? 'active' : '' ?>">
-                    <i class="fas fa-school"></i>
-                    <span>Kelola Kelas</span>
+                <a href="master_data.php" class="nav-link <?= in_array(basename($_SERVER['PHP_SELF']), ['master_data.php', 'jurusan.php', 'kelas.php']) ? 'active' : '' ?>">
+                    <i class="fas fa-database"></i>
+                    <span>Master Data</span>
                 </a>
             </div>
             <div class="nav-item">

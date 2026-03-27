@@ -117,13 +117,53 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Get all students
-$db->query('SELECT * FROM users WHERE role = "student" ORDER BY 
-            CASE status 
-                WHEN "pending" THEN 0 
-                WHEN "active" THEN 1 
-                ELSE 2 
-            END, created_at DESC');
+// Get search parameters
+$search = $_GET['search'] ?? '';
+$searchType = $_GET['search_type'] ?? 'all';
+
+// Build search query
+$searchSql = '';
+$searchParams = [];
+
+if(!empty($search)) {
+    $searchTerm = "%$search%";
+    switch($searchType) {
+        case 'nama':
+            $searchSql = ' AND (u.nama_lengkap LIKE :search)';
+            break;
+        case 'username':
+            $searchSql = ' AND (u.username LIKE :search)';
+            break;
+        case 'jurusan':
+            $searchSql = ' AND (j.nama_jurusan LIKE :search)';
+            break;
+        case 'institusi':
+            $searchSql = ' AND (u.institusi LIKE :search)';
+            break;
+        case 'magang':
+            $searchSql = ' AND (u.alamat_magang LIKE :search OR u.institusi LIKE :search)';
+            break;
+        default: // 'all' - search in all fields
+            $searchSql = ' AND (u.nama_lengkap LIKE :search OR u.username LIKE :search OR j.nama_jurusan LIKE :search OR u.institusi LIKE :search OR u.alamat_magang LIKE :search)';
+    }
+    $searchParams[':search'] = $searchTerm;
+}
+
+// Get all students with search
+$sql = 'SELECT u.*, j.nama_jurusan FROM users u 
+        LEFT JOIN jurusan j ON u.jurusan_id = j.id 
+        WHERE u.role = "student"' . $searchSql . ' 
+        ORDER BY 
+        CASE u.status 
+            WHEN "pending" THEN 0 
+            WHEN "active" THEN 1 
+            ELSE 2 
+        END, u.created_at DESC';
+
+$db->query($sql);
+foreach($searchParams as $key => $val) {
+    $db->bind($key, $val);
+}
 $students = $db->resultSet();
 
 // Count pending students
@@ -271,6 +311,51 @@ include 'includes/header.php';
                     <a href="students.php" class="btn btn-secondary">Batal</a>
                 </div>
             </form>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Search Form -->
+    <?php if(!isset($_GET['add']) && !$editStudent): ?>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-search me-2"></i>Pencarian Siswa
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="" class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" name="search" class="form-control" placeholder="Cari siswa..." 
+                               value="<?= htmlspecialchars($search) ?>">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select name="search_type" class="form-select">
+                        <option value="all" <?= $searchType === 'all' ? 'selected' : '' ?>>Semua Field</option>
+                        <option value="nama" <?= $searchType === 'nama' ? 'selected' : '' ?>>Nama Lengkap</option>
+                        <option value="username" <?= $searchType === 'username' ? 'selected' : '' ?>>Username</option>
+                        <option value="jurusan" <?= $searchType === 'jurusan' ? 'selected' : '' ?>>Jurusan</option>
+                        <option value="institusi" <?= $searchType === 'institusi' ? 'selected' : '' ?>>Institusi/Sekolah</option>
+                        <option value="magang" <?= $searchType === 'magang' ? 'selected' : '' ?>>Tempat Magang</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-2"></i>Cari
+                    </button>
+                </div>
+            </form>
+            <?php if(!empty($search)): ?>
+            <div class="mt-3">
+                <a href="students.php" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-times me-2"></i>Reset Pencarian
+                </a>
+                <span class="ms-2 text-muted">Hasil pencarian untuk: <strong><?= htmlspecialchars($search) ?></strong></span>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
     <?php endif; ?>

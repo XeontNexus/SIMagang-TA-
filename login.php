@@ -133,7 +133,6 @@ $admin_whatsapp = '6281234567890'; // Ganti dengan nomor WA admin
         .login-card {
             background: white;
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             overflow: hidden;
             width: 100%;
             max-width: 450px;
