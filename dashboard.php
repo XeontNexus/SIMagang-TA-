@@ -67,6 +67,9 @@ if($role === 'admin') {
     
     $db->query('SELECT * FROM kelas ORDER BY nama_kelas ASC');
     $kelasList = $db->resultSet();
+    
+    $db->query('SELECT * FROM guru_pembimbing ORDER BY nama_guru ASC');
+    $guruList = $db->resultSet();
 }
 
 include 'includes/header.php';
@@ -358,7 +361,12 @@ include 'includes/header.php';
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Guru Pembimbing</label>
-                            <input type="text" name="guru_pembimbing" class="form-control" placeholder="Nama guru pembimbing">
+                            <select name="guru_pembimbing_id" class="form-select">
+                                <option value="">- Pilih Guru Pembimbing -</option>
+                                <?php foreach($guruList as $g): ?>
+                                <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['nama_guru']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Kelas</label>

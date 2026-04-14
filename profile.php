@@ -98,7 +98,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $institusi = $_POST['institusi'];
         $gmap_link = $_POST['gmap_link'] ?? '';
         $alamat_magang = $_POST['alamat_magang'] ?? '';
-        $guru_pembimbing = $_POST['guru_pembimbing'] ?? '';
+        $guru_pembimbing_id = $_POST['guru_pembimbing_id'] ?? null;
         $kelas_id = $_POST['kelas_id'] ?? null;
         $pendamping_lapangan = $_POST['pendamping_lapangan'] ?? '';
         $telp_pendamping = $_POST['telp_pendamping'] ?? '';
@@ -106,7 +106,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $tanggal_selesai = $_POST['tanggal_selesai'];
         
         $db->query('UPDATE users SET no_hp = :no_hp, jurusan_id = :jurusan_id, institusi = :institusi, 
-                    gmap_link = :gmap_link, alamat_magang = :alamat_magang, guru_pembimbing = :guru_pembimbing, 
+                    gmap_link = :gmap_link, alamat_magang = :alamat_magang, guru_pembimbing_id = :guru_pembimbing_id, 
                     kelas_id = :kelas_id, pendamping_lapangan = :pendamping_lapangan, telp_pendamping = :telp_pendamping, 
                     tanggal_mulai = :tanggal_mulai, tanggal_selesai = :tanggal_selesai 
                     WHERE id = :id');
@@ -115,7 +115,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $db->bind(':institusi', $institusi);
         $db->bind(':gmap_link', $gmap_link);
         $db->bind(':alamat_magang', $alamat_magang);
-        $db->bind(':guru_pembimbing', $guru_pembimbing);
+        $db->bind(':guru_pembimbing_id', $guru_pembimbing_id);
         $db->bind(':kelas_id', $kelas_id);
         $db->bind(':pendamping_lapangan', $pendamping_lapangan);
         $db->bind(':telp_pendamping', $telp_pendamping);

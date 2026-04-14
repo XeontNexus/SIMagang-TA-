@@ -252,6 +252,12 @@
                 </a>
             </div>
             <div class="nav-item">
+                <a href="jadwal_presensi.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'jadwal_presensi.php' ? 'active' : '' ?>">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Pengaturan Jadwal</span>
+                </a>
+            </div>
+            <div class="nav-item">
                 <a href="logbook_report.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'logbook_report.php' ? 'active' : '' ?>">
                     <i class="fas fa-book-open"></i>
                     <span>Laporan Logbook</span>
