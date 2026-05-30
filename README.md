@@ -1,59 +1,174 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# SIMagang - Sistem Informasi Magang
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+SIMagang adalah aplikasi web untuk manajemen siswa magang/PKL dengan fitur presensi harian dan logbook mingguan.
 
-## About Laravel
+## Fitur Utama
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### 2 Role Pengguna
+- **Admin**: Mengelola siswa, melihat laporan presensi dan logbook, approve/reject logbook
+- **Student (Siswa)**: Presensi harian (masuk/keluar), mengelola logbook mingguan
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Fitur Admin
+- Kelola data siswa magang (CRUD)
+- Laporan presensi siswa dengan filter bulan dan siswa
+- Laporan logbook mingguan dengan filter status
+- Approve/Reject logbook siswa
+- Detail statistik per siswa
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Fitur Student
+- Presensi harian dengan status (Hadir, Izin, Sakit)
+- Riwayat presensi 30 hari terakhir
+- Logbook mingguan (CRUD)
+- Submit logbook untuk review admin
+- Statistik presensi bulanan
 
-## Learning Laravel
+## Tech Stack
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- **Backend**: PHP 8+ (Native)
+- **Database**: MySQL/MariaDB
+- **Frontend**: 
+  - Tailwind CSS
+  - Bootstrap 5
+  - Font Awesome Icons
+- **Build Tool**: Vite
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Instalasi
 
-## Laravel Sponsors
+### 1. Clone/Download Project
+```bash
+cd C:\xampp\htdocs\projek
+# Copy project ke folder TA SIMagang
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 2. Setup Database
+```bash
+# Buka phpMyAdmin (http://localhost/phpmyadmin)
+# Buat database baru: simagang
+# Import file: database/schema.sql
+```
+Atau jalankan query dari `database/schema.sql`
 
-### Premium Partners
+### 3. Install Dependencies (Opsional untuk Development)
+```bash
+cd "TA SIMagang"
+npm install
+npm run dev
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 4. Konfigurasi
+Edit file `config/config.php` jika perlu mengubah:
+- Database connection settings
+- Base URL aplikasi
 
-## Contributing
+Default database config:
+- Host: localhost
+- User: root
+- Password: (kosong)
+- Database: simagang
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 5. Akses Aplikasi
+Buka browser dan akses:
+```
+http://localhost/projek/TA%20SIMagang/
+```
 
-## Code of Conduct
+## Akun Demo
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+| Role | Username | Password |
+|------|----------|----------|
+| Admin | admin | password |
+| Student | student1 | password |
 
-## Security Vulnerabilities
+## Struktur Folder
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```
+TA SIMagang/
+├── assets/
+│   └── js/
+│       ├── app.js          # Entry point Vite
+│       └── app.css         # Tailwind + custom styles
+├── config/
+│   └── config.php          # Database & app config
+├── database/
+│   └── schema.sql          # Database schema
+├── includes/
+│   ├── header.php          # Sidebar & header template
+│   └── footer.php          # Footer template
+├── index.php               # Redirect to login/dashboard
+├── login.php               # Login page
+├── logout.php              # Logout handler
+├── dashboard.php           # Dashboard admin/student
+├── presensi.php            # Presensi student
+├── logbook.php             # Logbook student
+├── students.php            # Kelola siswa (admin)
+├── presensi_report.php     # Laporan presensi (admin)
+├── logbook_report.php      # Laporan logbook (admin)
+├── student_detail.php      # Detail siswa (admin)
+├── profile.php             # Profil pengguna
+├── package.json            # NPM dependencies
+├── tailwind.config.js      # Tailwind config
+├── vite.config.js          # Vite config
+└── postcss.config.js       # PostCSS config
+```
 
-## License
+## Screenshots Fitur
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Login Page
+Halaman login dengan design modern menggunakan gradient background.
+
+### Dashboard Admin
+- Statistik total siswa, siswa aktif, presensi hari ini, logbook pending
+- Tabel siswa terbaru
+
+### Dashboard Student
+- Statistik presensi dan logbook pribadi
+- Status presensi hari ini
+- Quick actions untuk presensi dan logbook
+
+### Presensi
+- Check-in dengan pilihan status (Hadir, Izin, Sakit)
+- Check-out
+- Riwayat 30 hari terakhir
+- Statistik bulanan
+
+### Logbook
+- CRUD logbook mingguan
+- Status: Draft → Submitted → Approved/Rejected
+- Form lengkap: kegiatan, deskripsi, hasil, kendala, solusi
+
+### Admin - Kelola Siswa
+- Tambah/Edit/Hapus siswa
+- Set periode magang
+- Status: Active, Inactive, Completed
+
+### Admin - Laporan
+- Filter by siswa dan bulan (presensi)
+- Filter by siswa dan status (logbook)
+- Print laporan
+- Approve/Reject logbook
+
+## Keamanan
+
+- Password di-hash menggunakan bcrypt
+- Session-based authentication
+- Role-based access control
+- Prepared statements untuk SQL queries (anti SQL injection)
+- XSS protection dengan htmlspecialchars
+
+## Pengembangan Selanjutnya
+
+Beberapa fitur yang bisa ditambahkan:
+- Upload foto profile
+- Geolocation untuk presensi
+- Export PDF laporan
+- Notifikasi email
+- Multi-level admin
+- Konfigurasi shift/jam kerja
+
+## Lisensi
+
+Open Source - bebas digunakan untuk keperluan pembelajaran dan pengembangan.
+
+---
+
+Dibuat dengan ❤️ untuk memudahkan manajemen magang.
