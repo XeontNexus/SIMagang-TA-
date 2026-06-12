@@ -4,13 +4,11 @@
 @section('page-title', 'Kelola Akun Siswa')
 
 @section('content')
-@if(session('wa_fallback_link'))
+{{-- Alert untuk warning message --}}
+@if(session('warning'))
 <div class="alert alert-warning alert-dismissible fade show" role="alert">
-    <i class="fab fa-whatsapp me-2"></i>
-    WhatsApp otomatis gagal untuk <strong>{{ session('wa_fallback_name') }}</strong>.
-    <a href="{{ session('wa_fallback_link') }}" target="_blank" rel="noopener" class="alert-link fw-bold">
-        Klik di sini untuk kirim manual via WhatsApp
-    </a>
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Peringatan:</strong> {{ session('warning') }}
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 @endif
@@ -30,7 +28,7 @@
     <div class="card-body">
         <form method="GET" action="{{ route('admin.students.index') }}" class="row g-3 mb-4" id="searchForm">
             <div class="col-md-5">
-                <input type="text" name="search" class="form-control" placeholder="Cari nama/username/no. WA..."
+                <input type="text" name="search" class="form-control" placeholder="Cari nama/username/email..."
                        value="{{ request('search') }}" id="searchInput">
             </div>
             <div class="col-md-4">
@@ -72,9 +70,7 @@
                             </td>
                             <td>
                                 @if($student->no_hp)
-                                    <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $student->no_hp) }}" target="_blank" rel="noopener" class="text-decoration-none">
-                                        <i class="fab fa-whatsapp text-success me-1"></i>{{ $student->no_hp }}
-                                    </a>
+                                    <span>{{ $student->no_hp }}</span>
                                 @else
                                     <span class="text-muted">-</span>
                                 @endif
@@ -85,13 +81,19 @@
                                     <a href="{{ route('admin.students.edit', $student) }}" class="btn btn-sm btn-warning" title="Edit Akun">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <form id="send-account-form-{{ $student->id }}" action="{{ route('admin.students.send-account-info', $student) }}" method="POST" class="m-0">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-success" title="Kirim Akun via WhatsApp"
-                                                onclick="return confirm('Kirim informasi akun ke {{ $student->nama_lengkap }}?')">
+                                    @if($student->no_hp)
+                                        @php
+                                            $waMessage = "Halo *" . $student->nama_lengkap . "*,\n\nAdmin SIMagang menginformasikan bahwa *akun PKL Anda sudah siap digunakan*.\n\nDetail login:\nUsername: *" . $student->username . "*\nPassword: *" . ($student->password_plain ?? $student->nisn ?? '[Password Anda]') . "*\n\nLink login: " . url('/login') . "\n\n_Segera ganti password setelah login pertama demi keamanan._";
+                                            $waPhone = preg_replace('/[^0-9]/', '', $student->no_hp);
+                                            if (str_starts_with($waPhone, '0')) {
+                                                $waPhone = '62' . substr($waPhone, 1);
+                                            }
+                                            $waUrl = "https://wa.me/" . $waPhone . "?text=" . rawurlencode($waMessage);
+                                        @endphp
+                                        <a href="{{ $waUrl }}" target="_blank" class="btn btn-sm btn-success" title="Kirim Info Akun via WhatsApp">
                                             <i class="fab fa-whatsapp"></i>
-                                        </button>
-                                    </form>
+                                        </a>
+                                    @endif
                                     <form id="delete-form-{{ $student->id }}" action="{{ route('admin.students.destroy', $student) }}" method="POST" class="m-0">
                                         @csrf
                                         @method('DELETE')

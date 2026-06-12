@@ -13,9 +13,9 @@ class MasterDataController extends Controller
 {
     public function index()
     {
-        $jurusans = Jurusan::all();
-        $kelas = Kelas::with('jurusan')->get();
-        $gurus = GuruPembimbing::all();
+        $jurusans = Jurusan::orderBy('nama_jurusan')->get();
+        $kelas = Kelas::with('jurusan')->orderBy('nama_kelas')->get();
+        $gurus = GuruPembimbing::orderBy('nama_guru')->get();
         $radiusHijau = Setting::get('radius_hijau', 30);
         $radiusKuning = Setting::get('radius_kuning', 70);
         

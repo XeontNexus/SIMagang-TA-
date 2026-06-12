@@ -27,7 +27,9 @@
             <i class="fas fa-database"></i>
             Kelola Data
         </a>
-    </li>    <li class="nav-item">
+    </li>
+
+    <li class="nav-item">
         <a href="{{ route('admin.location-requests.index') }}" class="nav-link {{ request()->routeIs('admin.location-requests.*') ? 'active' : '' }}">
             <i class="fas fa-map-pin"></i>
             Permintaan Lokasi

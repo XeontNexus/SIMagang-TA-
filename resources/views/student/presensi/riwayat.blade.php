@@ -12,6 +12,11 @@
     </div>
 </div>
 
+<div class="alert alert-info py-2 small mb-3">
+    <i class="fas fa-info-circle me-1"></i>
+    Riwayat presensi hanya menampilkan <strong>7 hari terakhir</strong>. Data lebih lama dihapus otomatis.
+</div>
+
 <div class="card shadow">
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-history"></i> Riwayat Presensi</h6>

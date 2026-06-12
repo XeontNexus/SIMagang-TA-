@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Logbook;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -156,7 +157,7 @@ class LogbookController extends Controller
         $tanggalMulai = Carbon::createFromDate($tahun, $bulan, 1);
         $tanggalSelesai = $tanggalMulai->copy()->endOfMonth();
 
-        Logbook::create([
+        $logbook = Logbook::create([
             'user_id' => $user->id,
             'minggu_ke' => $request->minggu_ke,
             'tanggal_mulai' => $tanggalMulai,
@@ -167,6 +168,8 @@ class LogbookController extends Controller
             'solusi' => $request->solusi,
             'status' => 'submitted',
         ]);
+
+        NotificationService::notifyLogbookSubmitted($logbook);
 
         return redirect()->route('student.logbooks.index')
             ->with('success', 'Logbook berhasil disimpan!');
@@ -226,6 +229,7 @@ class LogbookController extends Controller
         }
 
         $logbook->update(['status' => 'submitted']);
+        NotificationService::notifyLogbookSubmitted($logbook);
 
         return redirect()->route('student.logbooks.index')
             ->with('success', 'Logbook berhasil disubmit untuk approval!');

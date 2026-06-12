@@ -4,8 +4,9 @@
 namespace Tests\Feature;
 
 use App\Helpers\LocationHelper;
+use Tests\TestCase;
 
-class GoogleMapsUrlParsingTest
+class GoogleMapsUrlParsingTest extends TestCase
 {
     public function testVariousGoogleMapsFormats()
     {
@@ -103,13 +104,6 @@ class GoogleMapsUrlParsingTest
         echo "Failed: $failed\n";
         echo "Total: " . ($passed + $failed) . "\n";
 
-        return $failed === 0;
+        $this->assertEquals(0, $failed, "Google Maps URL parsing tests failed!");
     }
-}
-
-// Run test if called from command line
-if (php_sapi_name() === 'cli') {
-    $test = new GoogleMapsUrlParsingTest();
-    $result = $test->testVariousGoogleMapsFormats();
-    exit($result ? 0 : 1);
 }

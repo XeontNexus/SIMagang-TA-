@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Helpers\SpreadsheetEmbedHelper;
 use App\Models\Logbook;
 use App\Models\Setting;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class LogbookController extends Controller
@@ -15,10 +16,10 @@ class LogbookController extends Controller
         $query = Logbook::with('user');
 
         // Exclude approved logbooks from approval list
-        $query->where('status', '!=', 'approved');
+        $query->where('logbooks.status', '!=', 'approved');
 
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
+        if ($request->filled('status')) {
+            $query->where('logbooks.status', $request->status);
         }
 
         if ($request->has('search')) {
@@ -28,17 +29,27 @@ class LogbookController extends Controller
             });
         }
 
-        $logbooks = $query->latest()->paginate(20);
+        $logbooks = $query
+            ->join('users', 'logbooks.user_id', '=', 'users.id')
+            ->orderBy('users.nama_lengkap')
+            ->orderBy('logbooks.minggu_ke')
+            ->select('logbooks.*')
+            ->paginate(20);
 
         // Get approved logbooks for data tab
-        $approvedQuery = Logbook::with('user')->where('status', 'approved');
+        $approvedQuery = Logbook::with('user')->where('logbooks.status', 'approved');
         if ($request->has('search') && strpos($request->input('search'), '') === 0) {
             $search = $request->search;
             $approvedQuery->whereHas('user', function($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%");
             });
         }
-        $approvedLogbooks = $approvedQuery->latest()->get();
+        $approvedLogbooks = $approvedQuery
+            ->join('users', 'logbooks.user_id', '=', 'users.id')
+            ->orderBy('users.nama_lengkap')
+            ->orderBy('logbooks.minggu_ke')
+            ->select('logbooks.*')
+            ->get();
 
         // Get Excel Logbook data
         $excelUrl = Setting::get('logbook_excel_url', '');
@@ -49,7 +60,7 @@ class LogbookController extends Controller
 
     public function studentData(Request $request)
     {
-        $query = Logbook::with('user')->where('status', 'approved');
+        $query = Logbook::with('user')->where('logbooks.status', 'approved');
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -58,7 +69,12 @@ class LogbookController extends Controller
             });
         }
 
-        $studentLogbooks = $query->latest()->paginate(20);
+        $studentLogbooks = $query
+            ->join('users', 'logbooks.user_id', '=', 'users.id')
+            ->orderBy('users.nama_lengkap')
+            ->orderBy('logbooks.minggu_ke')
+            ->select('logbooks.*')
+            ->paginate(20);
         return view('admin.logbooks.student-data', compact('studentLogbooks'));
     }
 
@@ -71,6 +87,17 @@ class LogbookController extends Controller
     public function approve(Logbook $logbook)
     {
         $logbook->update(['status' => 'approved']);
+        NotificationService::markRelatedAsRead('logbook', $logbook->id);
+        NotificationService::create(
+            $logbook->user_id,
+            'Logbook Disetujui',
+            "Logbook minggu ke-{$logbook->minggu_ke} Anda telah disetujui admin.",
+            'success',
+            'fa-book',
+            route('student.logbooks.index'),
+            'logbook',
+            $logbook->id
+        );
         return back()->with('success', 'Logbook berhasil disetujui!');
     }
 
@@ -81,6 +108,17 @@ class LogbookController extends Controller
             'status' => 'rejected',
             'catatan_admin' => $request->catatan_admin
         ]);
+        NotificationService::markRelatedAsRead('logbook', $logbook->id);
+        NotificationService::create(
+            $logbook->user_id,
+            'Logbook Ditolak',
+            "Logbook minggu ke-{$logbook->minggu_ke} ditolak: {$request->catatan_admin}",
+            'danger',
+            'fa-book',
+            route('student.logbooks.index'),
+            'logbook',
+            $logbook->id
+        );
         return back()->with('success', 'Logbook ditolak dengan catatan!');
     }
 }

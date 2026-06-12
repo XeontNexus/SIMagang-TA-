@@ -14,11 +14,11 @@
             <div class="card-body">
                 <p class="text-muted">
                     <i class="fas fa-info-circle me-1"></i>
-                    Download template CSV untuk membuat akun siswa secara massal. Isi kolom <strong>username, password, nama_lengkap, no_hp</strong> lalu upload kembali. Setelah terdaftar, sistem otomatis mengirim notifikasi WhatsApp berisi username, password, dan link login ke masing-masing siswa.
+                    Download template Excel untuk membuat akun siswa secara massal. Isi kolom <strong>username, nisn, nama_lengkap, no_hp</strong> lalu upload kembali. Kolom <strong>nisn</strong> akan otomatis disimpan sebagai NISN siswa sekaligus password akunnya. Setelah terdaftar, Anda dapat mengirim informasi login secara manual via WhatsApp.
                 </p>
 
                 <div class="d-grid gap-2 mb-3">
-                    <a href="{{ route('admin.import.template-akun') }}" class="btn btn-outline-primary">
+                    <a href="{{ route('admin.import.template-akun') }}" class="btn btn-outline-primary" download="template_pembuatan_akun.xlsx">
                         <i class="fas fa-download me-2"></i>Download Template Akun
                     </a>
                 </div>

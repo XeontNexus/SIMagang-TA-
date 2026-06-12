@@ -15,7 +15,7 @@
 
         body {
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -173,6 +173,10 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                background: white;
+            }
+
             .login-container {
                 flex-direction: column;
                 margin: 1rem;

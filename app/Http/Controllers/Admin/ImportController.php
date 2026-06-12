@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\StudentAccountCreated;
+use App\Mail\StudentAccountInfo;
 use App\Models\User;
-use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ImportController extends Controller
 {
@@ -17,46 +22,120 @@ class ImportController extends Controller
     }
 
     /**
-     * Download Template Pembuatan Akun (CSV yang dapat dibuka di Excel)
+     * Download Template Pembuatan Akun (Excel XLSX)
      */
     public function downloadTemplateAkun()
     {
-        $filename = 'template_pembuatan_akun.csv';
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        
+        // Header
+        $sheet->setCellValue('A1', 'nama lengkap');
+        $sheet->setCellValue('B1', 'username');
+        $sheet->setCellValue('C1', 'nisn');
+        $sheet->setCellValue('D1', 'nomor wa');
+        
+        // Contoh data
+        $sheet->setCellValue('A2', 'Budi Santoso');
+        $sheet->setCellValue('B2', 'siswa001');
+        $sheet->setCellValue('C2', '1234567890');
+        $sheet->setCellValue('D2', '081234567890');
+
+        $sheet->setCellValue('A3', 'Ani Wijaya');
+        $sheet->setCellValue('B3', 'siswa002');
+        $sheet->setCellValue('C3', '1234567891');
+        $sheet->setCellValue('D3', '081234567891');
+
+        // Style header (A1:D1) - Bold, White text, Blue Fill, Centered
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['argb' => \PhpOffice\PhpSpreadsheet\Style\Color::COLOR_WHITE],
+                'size' => 11,
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['argb' => '4E73DF'], // Theme Primary Blue
+            ],
         ];
+        $sheet->getStyle('A1:D1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(25);
 
-        $callback = function () {
-            $handle = fopen('php://output', 'w');
-            // Header
-            fputcsv($handle, ['username', 'password', 'nama_lengkap', 'no_hp']);
-            // Contoh data
-            fputcsv($handle, ['siswa001', 'password123', 'Budi Santoso', '081234567890']);
-            fputcsv($handle, ['siswa002', 'password123', 'Ani Wijaya', '081298765432']);
-            fclose($handle);
-        };
+        // Center sample data columns for NISN and WA
+        $sheet->getStyle('B2:D3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        return response()->stream($callback, 200, $headers);
+        // Set cells as Text format to avoid dropping leading zeros
+        $sheet->getStyle('C2:C3')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        $sheet->getStyle('D2:D3')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+
+        // Add borders to A1:D3
+        $borderStyle = [
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['argb' => 'D3D3D3'],
+                ],
+            ],
+        ];
+        $sheet->getStyle('A1:D3')->applyFromArray($borderStyle);
+
+        // Auto size columns to fit content nicely
+        foreach (range('A', 'D') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        return response()->streamDownload(function() use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, 'template_pembuatan_akun.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
     }
 
 
     /**
      * Import Akun dari CSV/Excel
      */
-    public function importAkun(Request $request, WhatsAppService $whatsapp)
+    public function importAkun(Request $request)
     {
         $request->validate([
             'file_akun' => 'required|file|mimes:csv,txt,xlsx,xls',
         ]);
 
         $file = $request->file('file_akun');
-        $handle = fopen($file->getPathname(), 'r');
-        $header = fgetcsv($handle);
+        $extension = $file->getClientOriginalExtension();
+        
+        try {
+            if (in_array(strtolower($extension), ['xlsx', 'xls'])) {
+                $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file->getPathname());
+                $reader->setReadDataOnly(true);
+                $spreadsheet = $reader->load($file->getPathname());
+                $worksheet = $spreadsheet->getActiveSheet();
+                $rows = $worksheet->toArray();
+                
+                // Get header
+                $header = array_shift($rows);
+            } else {
+                // Fallback to CSV parsing
+                $handle = fopen($file->getPathname(), 'r');
+                $header = fgetcsv($handle);
+                $rows = [];
+                while (($row = fgetcsv($handle)) !== false) {
+                    $rows[] = $row;
+                }
+                fclose($handle);
+            }
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal membaca file: ' . $e->getMessage());
+        }
 
         if (!$header || count($header) < 4) {
-            fclose($handle);
-            return back()->with('error', 'Format file tidak valid. Pastikan kolom: username, password, nama_lengkap, no_hp');
+            return back()->with('error', 'Format file tidak valid. Pastikan kolom: nama lengkap, username, nisn, nomor wa');
         }
 
         $created = 0;
@@ -64,8 +143,12 @@ class ImportController extends Controller
         $errors = [];
         $line = 2;
 
-        while (($row = fgetcsv($handle)) !== false) {
-            if (count($row) < 4) {
+        foreach ($rows as $row) {
+            if (empty($row) || count($row) < 4) {
+                if (empty(array_filter($row))) {
+                    $line++;
+                    continue;
+                }
                 $errors[] = "Baris $line: data tidak lengkap";
                 $failed++;
                 $line++;
@@ -73,17 +156,17 @@ class ImportController extends Controller
             }
 
             $data = [
-                'username' => trim($row[0]),
-                'password' => trim($row[1]),
-                'nama_lengkap' => trim($row[2]),
+                'nama_lengkap' => trim($row[0]),
+                'username' => trim($row[1]),
+                'nisn' => trim($row[2]),
                 'no_hp' => trim($row[3]),
             ];
 
             $validator = Validator::make($data, [
                 'username' => 'required|unique:users,username|max:50',
-                'password' => 'required|min:6',
+                'nisn' => 'required|min:6',
                 'nama_lengkap' => 'required|max:100',
-                'no_hp' => 'required|string|max:20',
+                'no_hp' => 'required|max:20',
             ]);
 
             if ($validator->fails()) {
@@ -93,27 +176,21 @@ class ImportController extends Controller
                 continue;
             }
 
-            $user = User::create([
+            User::create([
                 'username' => $data['username'],
-                'password' => Hash::make($data['password']),
+                'nisn' => $data['nisn'],
+                'password' => Hash::make($data['nisn']), // nisn digunakan sebagai password
+                'password_plain' => $data['nisn'], // simpan password asli
                 'nama_lengkap' => $data['nama_lengkap'],
-                'email' => User::internalEmailFromUsername($data['username']),
                 'no_hp' => $data['no_hp'],
+                'email' => User::internalEmailFromUsername($data['username']),
                 'role' => 'siswa',
                 'status' => 'menunggu',
             ]);
 
-            $waResult = $whatsapp->sendAccountCreated($user, $data['password']);
-            if (!$waResult['success']) {
-                \Illuminate\Support\Facades\Log::error('Gagal mengirim WhatsApp akun: ' . $waResult['message']);
-                $errors[] = "Baris $line ({$data['username']}): Akun terbuat tapi WhatsApp gagal dikirim.";
-            }
-
             $created++;
             $line++;
         }
-
-        fclose($handle);
 
         $message = "Berhasil membuat $created akun siswa.";
         if ($failed > 0) {
@@ -126,16 +203,16 @@ class ImportController extends Controller
     }
 
     /**
-     * Kirim ulang informasi akun ke satu siswa via WhatsApp
+     * Kirim ulang informasi akun ke satu siswa via Email
      */
-    public function resendAccountInfo(User $student, WhatsAppService $whatsapp)
+    public function resendAccountInfo(User $student)
     {
         if (!$student || $student->role !== 'siswa') {
             return back()->with('error', 'Siswa tidak ditemukan atau tipe akun tidak valid.');
         }
 
-        if (empty($student->no_hp)) {
-            return back()->with('error', "Nomor WhatsApp {$student->nama_lengkap} belum diisi.");
+        if (empty($student->email) || str_ends_with($student->email, '@simagang.local')) {
+            return back()->with('error', "Email {$student->nama_lengkap} belum diisi.");
         }
 
         // Karena password sudah di-hash, kita tidak bisa menampilkan password asli
@@ -146,16 +223,17 @@ class ImportController extends Controller
     /**
      * Kirim informasi akun ke semua siswa yang belum menerima
      */
-    public function resendAccountInfoAll(WhatsAppService $whatsapp)
+    public function resendAccountInfoAll()
     {
         // Ambil siswa dengan status tertentu (misalnya yang baru di-import)
         $students = User::where('role', 'siswa')
             ->where('status', 'menunggu')
-            ->whereNotNull('no_hp')
+            ->whereNotNull('email')
+            ->where('email', 'not like', '%@simagang.local')
             ->get();
 
         if ($students->isEmpty()) {
-            return back()->with('info', 'Tidak ada siswa dengan status menunggu.');
+            return back()->with('info', 'Tidak ada siswa dengan status menunggu yang memiliki email.');
         }
 
         $sent = 0;
@@ -163,32 +241,17 @@ class ImportController extends Controller
         $errors = [];
 
         foreach ($students as $student) {
-            // Karena password sudah di-hash, kita tidak bisa mengirim password asli
-            // Jadi kita hanya bisa reset password atau kirim link login
-            $resetUrl = route('password.reset', ['email' => $student->email]);
-            
-            $message = implode("\n", [
-                "Halo *{$student->nama_lengkap}*,",
-                '',
-                'Admin SIMagang menginformasikan bahwa *akun PKL Anda sudah siap digunakan*.',
-                '',
-                "Username: *{$student->username}*",
-                "Link login: " . url('/login'),
-                '',
-                '_Segera hubungi admin untuk mendapatkan password Anda atau gunakan fitur reset password._',
-            ]);
-
-            $result = $whatsapp->send($student->no_hp, $message);
-            
-            if ($result['success']) {
+            try {
+                Mail::to($student->email)->send(new StudentAccountInfo($student));
                 $sent++;
-            } else {
+            } catch (\Exception $e) {
                 $failed++;
-                $errors[] = "{$student->nama_lengkap}: " . $result['message'];
+                $errors[] = "{$student->nama_lengkap}: " . $e->getMessage();
+                Log::error("Gagal mengirim email ke {$student->email}: " . $e->getMessage());
             }
         }
 
-        $message = "Informasi akun berhasil dikirim ke $sent siswa.";
+        $message = "Informasi akun berhasil dikirim ke $sent siswa via email.";
         if ($failed > 0) {
             $message .= " $failed gagal dikirim.";
         }

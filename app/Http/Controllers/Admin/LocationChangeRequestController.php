@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LocationChangeRequest;
 use App\Models\StudentNotification;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,7 +14,9 @@ class LocationChangeRequestController extends Controller
     public function index()
     {
         $requests = LocationChangeRequest::with('user')
-            ->latest()
+            ->join('users', 'location_change_requests.user_id', '=', 'users.id')
+            ->orderBy('users.nama_lengkap')
+            ->select('location_change_requests.*')
             ->paginate(20);
 
         $pendingCount = LocationChangeRequest::pending()->count();
@@ -42,6 +45,8 @@ class LocationChangeRequestController extends Controller
             'reviewed_at' => now(),
         ]);
 
+        NotificationService::markRelatedAsRead('location_change_request', $locationRequest->id);
+
         StudentNotification::notify(
             $student->id,
             'Perubahan Lokasi Disetujui',
@@ -66,6 +71,8 @@ class LocationChangeRequestController extends Controller
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ]);
+
+        NotificationService::markRelatedAsRead('location_change_request', $locationRequest->id);
 
         StudentNotification::notify(
             $locationRequest->user_id,

@@ -4,6 +4,12 @@
 @section('page-title', 'Tambah Siswa')
 
 @section('content')
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+    <i class="fab fa-whatsapp me-2"></i>
+    <strong>ℹ️ Notifikasi WhatsApp:</strong> Setelah siswa ditambahkan, Anda dapat mengirimkan detail login siswa secara manual melalui WhatsApp pada tombol aksi di daftar siswa.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
 <div class="card shadow">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h6 class="m-0 font-weight-bold text-primary">Form Tambah Siswa</h6>
@@ -45,10 +51,10 @@
                 </div>
 
                 <div class="col-md-6 mb-3">
-                    <label for="no_hp" class="form-label">No. WhatsApp <span class="text-danger">*</span></label>
+                    <label for="no_hp" class="form-label">Nomor WhatsApp (WA) <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="no_hp" name="no_hp" 
                            value="{{ old('no_hp') }}" placeholder="08xxxxxxxxxx" required>
-                    <small class="text-muted">Info login akun PKL akan dikirim otomatis ke nomor ini</small>
+                    <small class="text-muted">Nomor WhatsApp siswa aktif</small>
                 </div>
 
                 <div class="col-md-6 mb-3">
@@ -59,7 +65,10 @@
                             <i class="fas fa-eye" id="toggleIcon"></i>
                         </button>
                     </div>
-                    <small class="text-muted">Minimal 6 karakter</small>
+                    <small class="text-muted">
+                        Minimal 6 karakter<br>
+                        💡 <strong>Kirim info login ke siswa secara manual via WhatsApp setelah akun dibuat</strong>
+                    </small>
                 </div>
             </div>
 

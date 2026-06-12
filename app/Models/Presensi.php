@@ -40,6 +40,16 @@ class Presensi extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function hasBuktiFoto(): bool
+    {
+        return !empty($this->bukti_foto);
+    }
+
+    public function buktiFotoUrl(): ?string
+    {
+        return $this->bukti_foto ? asset('storage/' . $this->bukti_foto) : null;
+    }
+
     public function scopeHadir($query)
     {
         return $query->where('status', 'hadir');

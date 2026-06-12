@@ -180,6 +180,30 @@
                 display: none;
             }
         }
+
+        .notification-badge-dot {
+            position: absolute;
+            top: 2px;
+            right: 0;
+            min-width: 1.1rem;
+            height: 1.1rem;
+            padding: 0 0.3rem;
+            font-size: 0.65rem;
+            font-weight: 700;
+            line-height: 1.1rem;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px #e74a3b;
+        }
+
+        .notification-dot-only {
+            width: 10px;
+            height: 10px;
+            padding: 0;
+            min-width: 0;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px #e74a3b;
+        }
     </style>
     
     @stack('styles')
@@ -257,14 +281,79 @@
                     </span>
                     
                     <ul class="navbar-nav ms-auto">
-                        <li class="nav-item">
-                            <span class="nav-link">
-                                <span class="me-2 d-none d-lg-inline text-gray-600 small">
-                                    {{ auth()->user()->nama_lengkap }}
-                                </span>
-                                <i class="fas fa-user-circle fa-fw fs-5"></i>
-                            </span>
+                        <!-- Notification Bell -->
+                        @auth
+                        <li class="nav-item dropdown me-3">
+                            <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell fa-fw fs-5"></i>
+                                @if(auth()->user()->isSiswa())
+                                    <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-dot-only {{ ($navbarBadgeCount ?? 0) > 0 ? '' : 'd-none' }}"></span>
+                                @else
+                                    <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-dot {{ ($navbarBadgeCount ?? 0) > 0 ? '' : 'd-none' }}">
+                                        {{ ($navbarBadgeCount ?? 0) > 99 ? '99+' : ($navbarBadgeCount ?? 0) }}
+                                    </span>
+                                @endif
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="min-width: 350px; max-height: 500px; overflow-y: auto;">
+                                <li class="dropdown-header d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-bell me-2"></i>Notifikasi</span>
+                                    @if(($navbarBadgeCount ?? 0) > 0)
+                                        <form action="{{ route('notifications.read-all') }}" method="POST" id="markAllNotificationsForm" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-link btn-sm p-0 text-primary text-decoration-none" style="font-size: 0.75rem;">
+                                                Sudah lihat semua
+                                            </button>
+                                        </form>
+                                    @endif
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                @php
+                                    $bellNotifications = \App\Services\NotificationService::getBellItems(auth()->user(), 8);
+                                    $pendingItems = auth()->user()->isAdmin() ? \App\Services\NotificationService::getAdminPendingItems() : [];
+                                @endphp
+                                
+                                @if($bellNotifications->count() > 0)
+                                    @foreach($bellNotifications as $notif)
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-start" href="{{ $notif->link ?? route('notifications.index') }}">
+                                            @php
+                                                $colorClass = match($notif->type) {
+                                                    'success' => 'text-success',
+                                                    'warning' => 'text-warning',
+                                                    'danger' => 'text-danger',
+                                                    default => 'text-info'
+                                                };
+                                            @endphp
+                                            <i class="fas {{ $notif->icon ?? 'fa-bell' }} me-2 mt-1 {{ $colorClass }}"></i>
+                                            <div class="flex-grow-1">
+                                                <div class="small fw-semibold">{{ $notif->title }}</div>
+                                                <div class="text-muted small">{{ $notif->message }}</div>
+                                                <div class="text-muted tiny">{{ $notif->created_at->diffForHumans() }}</div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    @endforeach
+                                @elseif(auth()->user()->isAdmin() && count($pendingItems) > 0)
+                                    @foreach($pendingItems as $item)
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-start" href="{{ $item['link'] }}">
+                                            <i class="fas {{ $item['icon'] }} me-2 mt-1 text-warning"></i>
+                                            <div class="flex-grow-1">
+                                                <div class="small fw-semibold">{{ $item['title'] }}</div>
+                                                <div class="text-muted small">{{ $item['message'] }}</div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    @endforeach
+                                @else
+                                    <li><a class="dropdown-item text-center text-muted py-3" href="#">Tidak ada notifikasi</a></li>
+                                @endif
+                                
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-center small py-2" href="{{ route('notifications.index') }}">Lihat semua notifikasi</a></li>
+                            </ul>
                         </li>
+                        @endauth
                     </ul>
                 </div>
             </nav>
@@ -281,18 +370,6 @@
                         </div>
                     @endif
 
-                    @if(auth()->user()->isSiswa() && isset($studentNotifications) && $studentNotifications->count() > 0)
-                        @foreach($studentNotifications as $notif)
-                            <div class="alert alert-{{ $notif->type === 'success' ? 'success' : ($notif->type === 'danger' ? 'danger' : 'info') }} alert-dismissible fade show shadow-sm" role="alert">
-                                <h6 class="alert-heading mb-1"><i class="fas fa-bell me-2"></i>{{ $notif->title }}</h6>
-                                <p class="mb-2 small">{{ $notif->message }}</p>
-                                <form action="{{ route('student.notifications.read', $notif) }}" method="POST" class="d-inline mark-notif-read-form">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-outline-dark">Tutup</button>
-                                </form>
-                            </div>
-                        @endforeach
-                    @endif
                 @endauth
                 @yield('content')
             </div>
@@ -342,6 +419,47 @@
             document.getElementById('sidebar').classList.toggle('show');
             document.getElementById('sidebarOverlay').classList.toggle('show');
         }
+
+        const isStudentUser = @json(auth()->check() && auth()->user()->isSiswa());
+
+        function refreshNotificationBadge() {
+            fetch('{{ route('notifications.unread-count') }}', {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.getElementById('notificationBadge');
+                if (!badge) return;
+                const count = data.count || 0;
+                if (count > 0) {
+                    if (!isStudentUser) {
+                        badge.textContent = count > 99 ? '99+' : count;
+                    }
+                    badge.classList.remove('d-none');
+                } else {
+                    badge.classList.add('d-none');
+                }
+            })
+            .catch(() => {});
+        }
+
+        document.getElementById('markAllNotificationsForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(() => {
+                refreshNotificationBadge();
+                window.location.reload();
+            });
+        });
+
+        setInterval(refreshNotificationBadge, 60000);
 
         function confirmLogout() {
             Swal.fire({

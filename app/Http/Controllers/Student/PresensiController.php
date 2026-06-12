@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\LocationChangeRequest;
 use App\Models\StudentNotification;
 use App\Helpers\LocationHelper;
+use App\Services\PresensiRetentionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -43,7 +44,10 @@ class PresensiController extends Controller
     public function riwayat()
     {
         $user = Auth::user();
+        PresensiRetentionService::cleanupExpired();
+
         $presensis = Presensi::where('user_id', $user->id)
+            ->whereDate('tanggal', '>=', PresensiRetentionService::earliestVisibleDate())
             ->orderBy('tanggal', 'desc')
             ->paginate(20);
 
@@ -76,13 +80,20 @@ class PresensiController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $rules = [
             'status' => 'required|in:hadir,izin,sakit',
             'keterangan' => 'nullable|string|max:255',
-            'bukti_foto' => 'nullable|image|max:2048',
+            'bukti_foto' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-        ]);
+        ];
+
+        if (in_array($request->status, ['izin', 'sakit'], true)) {
+            $rules['keterangan'] = 'required|string|max:255';
+            $rules['bukti_foto'] = 'required|image|mimes:jpg,jpeg,png|max:2048';
+        }
+
+        $request->validate($rules);
 
         $user = Auth::user();
         $today = Carbon::today();
@@ -253,7 +264,7 @@ class PresensiController extends Controller
                 ], 422);
             }
 
-            LocationChangeRequest::create([
+            $locationRequest = LocationChangeRequest::create([
                 'user_id' => $user->id,
                 'old_gmap_magang' => $user->gmap_magang,
                 'old_latitude' => $user->latitude,
@@ -263,6 +274,8 @@ class PresensiController extends Controller
                 'new_longitude' => $coordinates['longitude'],
                 'status' => 'pending',
             ]);
+
+            \App\Services\NotificationService::notifyLocationChangeRequest($locationRequest);
 
             StudentNotification::notify(
                 $user->id,

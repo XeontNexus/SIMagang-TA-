@@ -10,7 +10,6 @@ use App\Http\Controllers\Admin\JadwalPresensiController;
 use App\Http\Controllers\Admin\MasterDataController;
 use App\Http\Controllers\Admin\ImportController as AdminImportController;
 use App\Http\Controllers\Admin\LogbookExcelController;
-use App\Http\Controllers\Admin\LocationComparisonController;
 use App\Http\Controllers\Admin\LocationDebugController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\PresensiController as StudentPresensiController;
@@ -30,6 +29,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 // Registration Routes
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
 Route::post('/register', [AuthController::class, 'register'])->name('register.post');
+Route::post('/register/check-duplicate', [AuthController::class, 'checkDuplicateUsernameAndNama'])->name('register.check-duplicate');
+// Allow check-duplicate without auth - it's needed during registration form
 
 // Complete Profile Routes
 Route::middleware(['auth'])->group(function () {
@@ -44,6 +45,15 @@ Route::middleware(['auth'])->group(function () {
     // Change Password
     Route::get('/password/change', [AuthController::class, 'showChangePassword'])->name('password.change');
     Route::post('/password/change', [AuthController::class, 'changePassword'])->name('password.change.post');
+    
+    // Notifications
+    Route::prefix('notifications')->name('notifications.')->controller(\App\Http\Controllers\NotificationController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('read-all', 'markAllAsRead')->name('read-all');
+        Route::post('{notification}/mark-as-read', 'markAsRead')->name('mark-as-read');
+        Route::get('unread-count', 'getUnreadCount')->name('unread-count');
+        Route::get('unread', 'getUnreadNotifications')->name('unread');
+    });
     
     // API for Guru Pembimbing details (for auto-fill no_hp)
     Route::get('/api/guru-pembimbing/{guru}/details', [\App\Http\Controllers\Admin\GuruPembimbingController::class, 'getDetails'])->name('api.guru-pembimbing.details');
@@ -60,9 +70,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Admin Dashboard
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
-    // Export Data Siswa
+    // Export Data
     Route::get('/export/students/excel', [\App\Http\Controllers\Admin\ExportController::class, 'exportExcel'])->name('export.excel');
-    Route::get('/export/students/word', [\App\Http\Controllers\Admin\ExportController::class, 'exportWord'])->name('export.word');
+    Route::get('/export/students/guru', [\App\Http\Controllers\Admin\ExportController::class, 'exportByGuru'])->name('export.guru');
+    Route::get('/export/students/kelas', [\App\Http\Controllers\Admin\ExportController::class, 'exportByKelas'])->name('export.kelas');
+    Route::get('/export/logbooks', [\App\Http\Controllers\Admin\ExportController::class, 'exportLogbook'])->name('export.logbooks');
 
     // Student Management
     Route::get('/students-list', [StudentController::class, 'list'])->name('students.list');
@@ -108,6 +120,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Presensi Management
     Route::get('/presensi', [AdminPresensiController::class, 'index'])->name('presensi.index');
     Route::get('/presensi/report', [AdminPresensiController::class, 'report'])->name('presensi.report');
+    Route::get('/presensi/records/{presensi}/bukti', [AdminPresensiController::class, 'showBukti'])->name('presensi.bukti');
+    Route::get('/presensi/records/{presensi}/bukti/download', [AdminPresensiController::class, 'downloadBukti'])->name('presensi.bukti.download');
     Route::get('/presensi/{student}/detail', [AdminPresensiController::class, 'detail'])->name('presensi.detail');
     
     // Logbook Management

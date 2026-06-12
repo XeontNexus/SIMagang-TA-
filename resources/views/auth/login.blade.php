@@ -85,7 +85,7 @@
     }
 
     body.bg-dark {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%) !important;
         min-height: 100vh;
         display: flex;
         align-items: center;
@@ -115,7 +115,7 @@
 
     .login-icon {
         font-size: 3.5rem;
-        color: #667eea;
+        color: #1565C0;
     }
 
     .login-title {
@@ -143,6 +143,10 @@
 
     /* Mobile Adjustments */
     @media (max-width: 575.98px) {
+        body.bg-dark {
+            background: white !important;
+        }
+
         .login-wrapper {
             padding: 0.5rem;
         }

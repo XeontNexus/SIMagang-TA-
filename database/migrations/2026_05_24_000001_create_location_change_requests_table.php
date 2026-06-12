@@ -8,6 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('location_change_requests')) {
+            if (!Schema::hasTable('student_notifications')) {
+                Schema::create('student_notifications', function (Blueprint $table) {
+                    $table->id();
+                    $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+                    $table->string('title', 150);
+                    $table->text('message');
+                    $table->string('type', 50)->default('info');
+                    $table->timestamp('read_at')->nullable();
+                    $table->timestamps();
+                });
+            }
+            return;
+        }
+
         Schema::create('location_change_requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();

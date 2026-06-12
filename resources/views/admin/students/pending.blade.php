@@ -16,7 +16,7 @@
                         <th>No</th>
                         <th>Nama Lengkap</th>
                         <th>Username</th>
-                        <th>No. WhatsApp</th>
+                        <th>Email</th>
                         <th>Institusi</th>
                         <th>Jurusan</th>
                         <th>Guru Pembimbing</th>
@@ -30,7 +30,7 @@
                             <td>{{ $index + 1 }}</td>
                             <td>{{ $student->nama_lengkap }}</td>
                             <td>{{ $student->username }}</td>
-                            <td>{{ $student->no_hp ?? '-' }}</td>
+                            <td>{{ $student->email && !str_ends_with($student->email, '@simagang.local') ? $student->email : '-' }}</td>
                             <td>{{ $student->institusi }}</td>
                             <td>{{ $student->jurusan?->nama_jurusan ?? '-' }}</td>
                             <td>{{ $student->guruPembimbing?->nama_guru ?? '-' }}</td>

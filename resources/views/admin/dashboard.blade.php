@@ -146,7 +146,7 @@
                         <div class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
                                 <h6 class="mb-1">{{ $student->nama_lengkap }}</h6>
-                                <small class="text-muted"><i class="fab fa-whatsapp me-1"></i>{{ $student->no_hp ?? '-' }}</small>
+                                <small class="text-muted"><i class="fas fa-envelope me-1"></i>{{ $student->email && !str_ends_with($student->email, '@simagang.local') ? $student->email : '-' }}</small>
                             </div>
                             @include('partials.student-status-badge', ['status' => $student->status])
                         </div>

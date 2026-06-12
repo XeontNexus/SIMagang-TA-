@@ -53,8 +53,9 @@
                 </div>
 
                 <div class="col-md-6 mb-3">
-                    <label for="no_hp" class="form-label">No. WhatsApp <span class="text-danger">*</span></label>
+                    <label for="no_hp" class="form-label">Nomor WhatsApp (WA) <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="no_hp" name="no_hp" value="{{ old('no_hp', $student->no_hp) }}" placeholder="08xxxxxxxxxx" required>
+                    <small class="text-muted">Nomor WhatsApp siswa aktif</small>
                 </div>
 
                 <div class="col-md-6 mb-3">

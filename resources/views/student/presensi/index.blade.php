@@ -122,10 +122,10 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="bukti_foto" class="form-label">Bukti Foto</label>
+                    <label for="bukti_foto" class="form-label">Bukti Foto <span class="text-danger">*</span></label>
                     <input type="file" class="form-control @error('bukti_foto') is-invalid @enderror" 
-                           id="bukti_foto" name="bukti_foto" accept="image/*">
-                    <small class="text-muted">Format: JPG, JPEG, PNG. Maks 2MB</small>
+                           id="bukti_foto" name="bukti_foto" accept="image/jpeg,image/jpg,image/png">
+                    <small class="text-muted">Wajib untuk Izin/Sakit. Format: JPG, JPEG, PNG. Maks 2MB</small>
                     @error('bukti_foto')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -238,9 +238,11 @@
         if (status === 'izin' || status === 'sakit') {
             section.style.display = 'block';
             keterangan.required = true;
+            buktiFoto.required = true;
         } else {
             section.style.display = 'none';
             keterangan.required = false;
+            buktiFoto.required = false;
             keterangan.value = '';
             buktiFoto.value = '';
         }

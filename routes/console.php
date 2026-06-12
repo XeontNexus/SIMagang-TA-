@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 
 use Illuminate\Support\Facades\Schedule;
 Schedule::command('presensi:check-alpha')->dailyAt('23:59');
+Schedule::command('presensi:cleanup-old')->dailyAt('00:05');

@@ -27,13 +27,14 @@ class StudentNotification extends Model
         return $this->belongsTo(User::class);
     }
 
-    public static function notify(int $userId, string $title, string $message, string $type = 'info'): self
+    public static function notify(int $userId, string $title, string $message, string $type = 'info'): void
     {
-        return self::create([
-            'user_id' => $userId,
-            'title' => $title,
-            'message' => $message,
-            'type' => $type,
-        ]);
+        \App\Services\NotificationService::create(
+            $userId,
+            $title,
+            $message,
+            $type,
+            'fa-bell'
+        );
     }
 }

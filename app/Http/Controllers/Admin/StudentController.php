@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\StudentAccountCreated;
+use App\Mail\StudentAccountInfo;
+use App\Mail\StudentAccountUpdated;
+use App\Mail\StudentPasswordReset;
 use App\Models\User;
-use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class StudentController extends Controller
 {
@@ -19,7 +24,7 @@ class StudentController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%")
                   ->orWhere('username', 'like', "%{$search}%")
-                  ->orWhere('no_hp', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
                   ->orWhere('institusi', 'like', "%{$search}%");
             });
         }
@@ -28,7 +33,7 @@ class StudentController extends Controller
             $query->where('status', $request->status);
         }
 
-        $students = $query->latest()->paginate(20);
+        $students = $query->orderBy('nama_lengkap')->paginate(20);
 
         return view('admin.students.index', compact('students'));
     }
@@ -42,7 +47,7 @@ class StudentController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%")
                   ->orWhere('username', 'like', "%{$search}%")
-                  ->orWhere('no_hp', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
                   ->orWhere('institusi', 'like', "%{$search}%")
                   ->orWhere('mitra_magang', 'like', "%{$search}%");
             });
@@ -60,9 +65,9 @@ class StudentController extends Controller
             $query->where('jurusan_id', $request->jurusan_id);
         }
 
-        $students = $query->latest()->paginate(20);
-        $jurusans = \App\Models\Jurusan::all();
-        $kelas = \App\Models\Kelas::all();
+        $students = $query->orderBy('nama_lengkap')->paginate(20);
+        $jurusans = \App\Models\Jurusan::orderBy('nama_jurusan')->get();
+        $kelas = \App\Models\Kelas::orderBy('nama_kelas')->get();
 
         return view('admin.students.list', compact('students', 'jurusans', 'kelas'));
     }
@@ -72,7 +77,7 @@ class StudentController extends Controller
         return view('admin.students.create');
     }
 
-    public function store(Request $request, WhatsAppService $whatsapp)
+    public function store(Request $request)
     {
         $request->validate([
             'nama_lengkap' => 'required|string|max:100',
@@ -84,32 +89,17 @@ class StudentController extends Controller
         $user = User::create([
             'nama_lengkap' => $request->nama_lengkap,
             'username' => $request->username,
-            'email' => User::internalEmailFromUsername($request->username),
             'no_hp' => $request->no_hp,
+            'email' => User::internalEmailFromUsername($request->username),
             'password' => Hash::make($request->password),
+            'password_plain' => $request->password,
             'role' => 'siswa',
             'status' => 'menunggu',
         ]);
 
-        $result = $whatsapp->sendAccountCreated($user, $request->password);
-
-        if ($result['success']) {
-            $msg = 'Siswa berhasil ditambahkan dan notifikasi WhatsApp telah dikirim!';
-        } else {
-            $waLink = $whatsapp->waMeLink(
-                $user->no_hp,
-                $whatsapp->buildAccountCreatedMessage($user, $request->password)
-            );
-            $msg = 'Siswa berhasil ditambahkan, namun WhatsApp otomatis gagal: ' . $result['message'];
-
-            return redirect()
-                ->route('admin.students.index')
-                ->with('success', $msg)
-                ->with('wa_fallback_link', $waLink)
-                ->with('wa_fallback_name', $user->nama_lengkap);
-        }
-
-        return redirect()->route('admin.students.index')->with('success', $msg);
+        return redirect()
+            ->route('admin.students.index')
+            ->with('success', '✅ Siswa berhasil ditambahkan!');
     }
 
     public function show(User $student)
@@ -123,7 +113,7 @@ class StudentController extends Controller
         return view('admin.students.edit', compact('student'));
     }
 
-    public function update(Request $request, User $student, WhatsAppService $whatsapp)
+    public function update(Request $request, User $student)
     {
         $request->validate([
             'nama_lengkap' => 'required|string|max:100',
@@ -141,35 +131,11 @@ class StudentController extends Controller
         $passwordChanged = $request->filled('password');
         if ($passwordChanged) {
             $data['password'] = Hash::make($request->password);
+            $data['password_plain'] = $request->password;
         }
 
         $student->update($data);
         $student->syncStudentStatus();
-
-        if ($passwordChanged) {
-            $message = implode("\n", [
-                "Halo *{$student->nama_lengkap}*,",
-                '',
-                'Admin SIMagang menginformasikan bahwa *akun PKL Anda telah diperbarui*.',
-                '',
-                "Username: *{$request->username}*",
-                "Password Baru: *{$request->password}*",
-                "Link login: " . url('/login'),
-                '',
-                '_Silakan login menggunakan kredensial baru Anda. Perubahan ini tidak menghapus data kemajuan (progress) akun Anda._',
-            ]);
-
-            $result = $whatsapp->send($request->no_hp, $message);
-
-            if (!$result['success']) {
-                $waLink = $whatsapp->waMeLink($request->no_hp, $message);
-                return redirect()
-                    ->route('admin.students.index')
-                    ->with('success', 'Data akun siswa berhasil diupdate, namun WhatsApp otomatis gagal: ' . $result['message'])
-                    ->with('wa_fallback_link', $waLink)
-                    ->with('wa_fallback_name', $student->nama_lengkap);
-            }
-        }
 
         return redirect()->route('admin.students.index')->with('success', 'Data akun siswa berhasil diupdate!');
     }
@@ -196,7 +162,7 @@ class StudentController extends Controller
         $students = User::where('role', 'siswa')
                         ->where('status', 'pending')
                         ->with(['jurusan', 'kelas', 'guruPembimbing'])
-                        ->latest()
+                        ->orderBy('nama_lengkap')
                         ->paginate(20);
         return view('admin.students.pending', compact('students'));
     }
@@ -216,11 +182,11 @@ class StudentController extends Controller
     /**
      * Send password reset link to student (admin initiated)
      */
-    public function sendResetLink(User $student, WhatsAppService $whatsapp)
+    public function sendResetLink(User $student)
     {
-        if (empty($student->no_hp)) {
+        if (empty($student->email) || str_ends_with($student->email, '@simagang.local')) {
             return redirect()->route('admin.students.index')
-                ->with('error', 'Nomor WhatsApp siswa belum diisi. Tidak dapat mengirim link reset.');
+                ->with('error', 'Email siswa belum diisi. Tidak dapat mengirim link reset.');
         }
 
         $token = \Illuminate\Support\Str::random(64);
@@ -230,73 +196,53 @@ class StudentController extends Controller
         );
 
         $resetUrl = url(route('password.reset', ['token' => $token, 'email' => $student->email], false));
-        $result = $whatsapp->sendPasswordReset($student, $resetUrl);
 
-        if ($result['success']) {
+        try {
+            Mail::to($student->email)->send(new StudentPasswordReset($student, $resetUrl));
             return redirect()->route('admin.students.index')
-                ->with('success', 'Link reset password berhasil dikirim ke WhatsApp ' . $student->no_hp);
+                ->with('success', 'Link reset password berhasil dikirim ke email ' . $student->email);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengirim email reset password: ' . $e->getMessage());
+            return redirect()->route('admin.students.index')
+                ->with('error', 'Gagal mengirim email reset password: ' . $e->getMessage());
         }
-
-        $waLink = $whatsapp->waMeLink($student->no_hp, $whatsapp->buildPasswordResetMessage($student, $resetUrl));
-
-        return redirect()
-            ->route('admin.students.index')
-            ->with('error', 'Gagal mengirim WhatsApp: ' . $result['message'])
-            ->with('wa_fallback_link', $waLink)
-            ->with('wa_fallback_name', $student->nama_lengkap);
     }
 
     /**
-     * Kirim informasi akun ke siswa individual via WhatsApp
+     * Kirim informasi akun ke siswa individual via Email
      */
-    public function sendAccountInfo(User $student, WhatsAppService $whatsapp)
+    public function sendAccountInfo(User $student)
     {
         if ($student->role !== 'siswa') {
             return back()->with('error', 'User bukan siswa.');
         }
 
-        if (empty($student->no_hp)) {
-            return back()->with('error', "Nomor WhatsApp {$student->nama_lengkap} belum diisi.");
+        if (empty($student->email) || str_ends_with($student->email, '@simagang.local')) {
+            return back()->with('error', "Email {$student->nama_lengkap} belum diisi.");
         }
 
-        // Kirim pesan berisi link login dan username
-        $message = implode("\n", [
-            "Halo *{$student->nama_lengkap}*,",
-            '',
-            'Admin SIMagang menginformasikan bahwa *akun PKL Anda sudah siap digunakan*.',
-            '',
-            "Username: *{$student->username}*",
-            "Link login: " . url('/login'),
-            '',
-            '_Jika Anda lupa password, gunakan fitur "Reset Password" di halaman login._',
-        ]);
-
-        $result = $whatsapp->send($student->no_hp, $message);
-
-        if ($result['success']) {
-            return back()->with('success', 'Informasi akun berhasil dikirim ke WhatsApp ' . $student->no_hp);
+        try {
+            Mail::to($student->email)->send(new StudentAccountInfo($student));
+            return back()->with('success', 'Informasi akun berhasil dikirim ke email ' . $student->email);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengirim email info akun: ' . $e->getMessage());
+            return back()->with('error', 'Gagal mengirim email: ' . $e->getMessage());
         }
-
-        $waLink = $whatsapp->waMeLink($student->no_hp, $message);
-
-        return back()
-            ->with('error', 'Gagal mengirim WhatsApp: ' . $result['message'])
-            ->with('wa_fallback_link', $waLink)
-            ->with('wa_fallback_name', $student->nama_lengkap);
     }
 
     /**
      * Kirim informasi akun ke semua siswa dengan status tertentu
      */
-    public function sendAccountInfoAll(WhatsAppService $whatsapp)
+    public function sendAccountInfoAll()
     {
         $students = User::where('role', 'siswa')
             ->where('status', 'menunggu')
-            ->whereNotNull('no_hp')
+            ->whereNotNull('email')
+            ->where('email', 'not like', '%@simagang.local')
             ->get();
 
         if ($students->isEmpty()) {
-            return back()->with('info', 'Tidak ada siswa dengan status menunggu.');
+            return back()->with('info', 'Tidak ada siswa dengan status menunggu yang memiliki email.');
         }
 
         $sent = 0;
@@ -304,28 +250,17 @@ class StudentController extends Controller
         $errors = [];
 
         foreach ($students as $student) {
-            $message = implode("\n", [
-                "Halo *{$student->nama_lengkap}*,",
-                '',
-                'Admin SIMagang menginformasikan bahwa *akun PKL Anda sudah siap digunakan*.',
-                '',
-                "Username: *{$student->username}*",
-                "Link login: " . url('/login'),
-                '',
-                '_Jika Anda lupa password, gunakan fitur "Reset Password" di halaman login._',
-            ]);
-
-            $result = $whatsapp->send($student->no_hp, $message);
-
-            if ($result['success']) {
+            try {
+                Mail::to($student->email)->send(new StudentAccountInfo($student));
                 $sent++;
-            } else {
+            } catch (\Exception $e) {
                 $failed++;
-                $errors[] = "{$student->nama_lengkap}: " . $result['message'];
+                $errors[] = "{$student->nama_lengkap}: " . $e->getMessage();
+                Log::error("Gagal mengirim email ke {$student->email}: " . $e->getMessage());
             }
         }
 
-        $message = "Informasi akun berhasil dikirim ke $sent siswa.";
+        $message = "Informasi akun berhasil dikirim ke $sent siswa via email.";
         if ($failed > 0) {
             $message .= " $failed gagal dikirim.";
         }

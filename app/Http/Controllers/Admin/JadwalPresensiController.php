@@ -12,10 +12,12 @@ class JadwalPresensiController extends Controller
     public function index(Request $request)
     {
         // All students for dropdown selection
-        $students = User::where('role', 'siswa')->get();
+        $students = User::where('role', 'siswa')->orderBy('nama_lengkap')->get();
         
-        // All jadwal presensi
-        $jadwals = JadwalPresensi::with('user')->latest()->get();
+        $jadwals = JadwalPresensi::with('user')
+            ->get()
+            ->sortBy(fn ($jadwal) => $jadwal->user?->nama_lengkap ?? '')
+            ->values();
 
         return view('admin.jadwal-presensi.index', compact('students', 'jadwals'));
     }

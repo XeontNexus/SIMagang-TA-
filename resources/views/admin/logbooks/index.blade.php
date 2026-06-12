@@ -5,15 +5,17 @@
 
 @section('content')
 <!-- Nav Tabs -->
-<ul class="nav nav-tabs mb-4" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="approval-tab" data-bs-toggle="tab" data-bs-target="#approvalTab" type="button" role="tab">
-            <i class="fas fa-check-circle me-2"></i>Approval Logbook
+<ul class="nav nav-tabs logbook-admin-tabs mb-4 flex-nowrap" role="tablist">
+    <li class="nav-item flex-fill" role="presentation">
+        <button class="nav-link active w-100" id="approval-tab" data-bs-toggle="tab" data-bs-target="#approvalTab" type="button" role="tab">
+            <i class="fas fa-check-circle d-none d-sm-inline me-sm-2"></i>
+            <span class="logbook-tab-label">Approval Logbook</span>
         </button>
     </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="data-tab" data-bs-toggle="tab" data-bs-target="#dataTab" type="button" role="tab">
-            <i class="fas fa-graduation-cap me-2"></i>Data Logbook Siswa
+    <li class="nav-item flex-fill" role="presentation">
+        <button class="nav-link w-100" id="data-tab" data-bs-toggle="tab" data-bs-target="#dataTab" type="button" role="tab">
+            <i class="fas fa-graduation-cap d-none d-sm-inline me-sm-2"></i>
+            <span class="logbook-tab-label">Data Logbook Siswa</span>
         </button>
     </li>
 </ul>
@@ -458,4 +460,51 @@
     </div><!-- End Tab Data Logbook Siswa -->
 </div><!-- End Tab Content -->
 
+@push('styles')
+<style>
+    .logbook-admin-tabs {
+        display: flex;
+        flex-wrap: nowrap;
+        width: 100%;
+    }
+
+    .logbook-admin-tabs .nav-item {
+        flex: 1 1 50%;
+        min-width: 0;
+        text-align: center;
+    }
+
+    .logbook-admin-tabs .nav-link {
+        text-align: center;
+        border-radius: 0;
+        padding: 0.7rem 0.35rem;
+        font-size: 0.78rem;
+        line-height: 1.25;
+        white-space: normal;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .logbook-admin-tabs .nav-link.active {
+        font-weight: 600;
+    }
+
+    @media (max-width: 575.98px) {
+        .logbook-admin-tabs .logbook-tab-label {
+            display: block;
+            font-size: 0.72rem;
+        }
+    }
+
+    @media (min-width: 576px) {
+        .logbook-admin-tabs .nav-link {
+            font-size: 0.95rem;
+            padding: 0.65rem 1rem;
+            white-space: nowrap;
+        }
+    }
+</style>
+@endpush
 @endsection

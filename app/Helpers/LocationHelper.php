@@ -2,6 +2,9 @@
 
 namespace App\Helpers;
 
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
 /**
  * Helper untuk menghitung jarak berdasarkan koordinat GPS menggunakan Haversine Formula
  */
@@ -91,101 +94,132 @@ class LocationHelper
         // Decode URL encoded characters (e.g., %2C becomes ,)
         $gmapUrl = urldecode($gmapUrl);
 
-        // Expand short URLs (e.g. goo.gl, maps.app.goo.gl) using cURL
-        if (strpos($gmapUrl, 'goo.gl') !== false || strpos($gmapUrl, 'maps.app.goo.gl') !== false) {
+        // Expand short URLs (goo.gl, maps.app.goo.gl, share.google)
+        if (preg_match('/(goo\.gl|maps\.app\.goo\.gl|share\.google)/i', $gmapUrl)) {
             $expandedUrl = self::expandShortUrl($gmapUrl);
             if ($expandedUrl) {
-                $gmapUrl = $expandedUrl;
-                $gmapUrl = urldecode($gmapUrl);
+                $gmapUrl = urldecode($expandedUrl);
             }
         }
 
-        // Pattern 1: q=lat,lon (query parameter with coordinates)
-        // Supports: ?q=-6.175392,106.827153 or &q=-6.175392,106.827153
-        if (preg_match('/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/', $gmapUrl, $matches)) {
-            if (isset($matches[1]) && isset($matches[2])) {
+        // Normalisasi domain Google Maps
+        $gmapUrl = str_replace(
+            ['google.co.id/maps', 'google.com/maps', 'm.google.com/maps'],
+            'google.com/maps',
+            $gmapUrl
+        );
+
+        $patterns = [
+            // /search/lat,lon
+            '/\/search\/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/',
+            // api=1&query=lat,lon
+            '/[?&]query=(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/',
+            // center= / destination= / ll=
+            '/[?&](?:center|destination|ll)=(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/',
+            // ?q=lat,lon
+            '/[?&]q=(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/',
+            // /@lat,lon
+            '/@(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/',
+            // !3dLAT!4dLON (bisa ada karakter di antaranya)
+            '/!3d(-?\d+\.?\d*).*?!4d(-?\d+\.?\d*)/',
+            // !4d sebelum !3d (jarang)
+            '/!4d(-?\d+\.?\d*).*?!3d(-?\d+\.?\d*)/',
+        ];
+
+        foreach ($patterns as $index => $pattern) {
+            if (preg_match($pattern, $gmapUrl, $matches)) {
                 $lat = (float) $matches[1];
                 $lon = (float) $matches[2];
+                // Pattern terakhir swap lat/lon jika format !4d...!3d
+                if ($index === count($patterns) - 1) {
+                    [$lat, $lon] = [$lon, $lat];
+                }
                 if (self::isValidCoordinate($lat, $lon)) {
-                    return [
-                        'latitude' => $lat,
-                        'longitude' => $lon
-                    ];
+                    return ['latitude' => $lat, 'longitude' => $lon];
                 }
             }
         }
 
-        // Pattern 2: /@lat,lon (at symbol with coordinates)
-        // Supports: /@-6.175392,106.827153 or /@-6.175392,106.827153,15z
-        if (preg_match('/@(-?\d+\.?\d+),(-?\d+\.?\d+)/', $gmapUrl, $matches)) {
-            if (isset($matches[1]) && isset($matches[2])) {
-                $lat = (float) $matches[1];
-                $lon = (float) $matches[2];
-                if (self::isValidCoordinate($lat, $lon)) {
-                    return [
-                        'latitude' => $lat,
-                        'longitude' => $lon
-                    ];
-                }
-            }
+        // Scan semua pasangan koordinat di URL (fallback kuat)
+        $scanned = self::findCoordinatePairsInUrl($gmapUrl);
+        if ($scanned) {
+            return $scanned;
         }
-        
-        // Pattern 3: ll=lat,lon (ll parameter with coordinates)
-        if (preg_match('/[?&]ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/', $gmapUrl, $matches)) {
-            if (isset($matches[1]) && isset($matches[2])) {
-                $lat = (float) $matches[1];
-                $lon = (float) $matches[2];
-                if (self::isValidCoordinate($lat, $lon)) {
-                    return [
-                        'latitude' => $lat,
-                        'longitude' => $lon
-                    ];
-                }
+
+        // Geocoding dari nama tempat di path URL
+        $placeName = self::extractPlaceNameFromUrl($gmapUrl);
+        if ($placeName) {
+            $geocoded = self::geocodePlaceName($placeName);
+            if ($geocoded) {
+                return $geocoded;
             }
         }
 
-        // Pattern 4: !3d lat !4d lon (data parameter format)
-        if (preg_match('/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/', $gmapUrl, $matches)) {
-            if (isset($matches[1]) && isset($matches[2])) {
-                $lat = (float) $matches[1];
-                $lon = (float) $matches[2];
-                if (self::isValidCoordinate($lat, $lon)) {
-                    return [
-                        'latitude' => $lat,
-                        'longitude' => $lon
-                    ];
-                }
-            }
+        return null;
+    }
+
+    private static function findCoordinatePairsInUrl(string $url): ?array
+    {
+        if (!preg_match_all('/(-?\d{1,3}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/', $url, $matches, PREG_SET_ORDER)) {
+            return null;
         }
 
-        // Pattern 5: 3d=lat and 4d=lon (alternative data format)
-        if (preg_match('/[?&]3d=(-?\d+\.?\d*)/', $gmapUrl, $matches1) && 
-            preg_match('/[?&]4d=(-?\d+\.?\d*)/', $gmapUrl, $matches2)) {
-            if (isset($matches1[1]) && isset($matches2[1])) {
-                $lat = (float) $matches1[1];
-                $lon = (float) $matches2[1];
-                if (self::isValidCoordinate($lat, $lon)) {
-                    return [
-                        'latitude' => $lat,
-                        'longitude' => $lon
-                    ];
-                }
+        $fallback = null;
+        foreach ($matches as $match) {
+            $lat = (float) $match[1];
+            $lon = (float) $match[2];
+            if (!self::isValidCoordinate($lat, $lon)) {
+                continue;
             }
+            if (self::isLikelyIndonesia($lat, $lon)) {
+                return ['latitude' => $lat, 'longitude' => $lon];
+            }
+            $fallback ??= ['latitude' => $lat, 'longitude' => $lon];
         }
 
-        // Pattern 6: Inside embed parameter: 1s or similar coordinate patterns
-        // Try to find any coordinate-like pattern in the URL
-        if (preg_match('/[?&]([^=&]*?)=(-?\d+\.?\d+)(?:[,\s\/]|\s)(-?\d+\.?\d+)/', $gmapUrl, $matches)) {
-            // This is a fallback for other coordinate-like patterns
-            // Make sure it looks like coordinates (latitude range: -90 to 90, longitude: -180 to 180)
-            $lat = (float) $matches[2];
-            $lon = (float) $matches[3];
-            if (self::isValidCoordinate($lat, $lon)) {
+        return $fallback;
+    }
+
+    private static function isLikelyIndonesia(float $lat, float $lon): bool
+    {
+        return $lat >= -11 && $lat <= 6 && $lon >= 95 && $lon <= 141;
+    }
+
+    private static function extractPlaceNameFromUrl(string $url): ?string
+    {
+        if (preg_match('/\/place\/([^/@?]+)/', $url, $matches)) {
+            return trim(str_replace('+', ' ', urldecode($matches[1])));
+        }
+        if (preg_match('/\/search\/([^/@?]+)/', $url, $matches)) {
+            $name = urldecode($matches[1]);
+            if (!preg_match('/^-?\d/', $name)) {
+                return trim(str_replace('+', ' ', $name));
+            }
+        }
+        return null;
+    }
+
+    private static function geocodePlaceName(string $placeName): ?array
+    {
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => 'SIMagang-Laravel/1.0 (contact@simagang.local)',
+            ])->timeout(10)->get('https://nominatim.openstreetmap.org/search', [
+                'q' => $placeName,
+                'format' => 'json',
+                'limit' => 1,
+                'countrycodes' => 'id',
+            ]);
+
+            if ($response->successful() && !empty($response->json())) {
+                $result = $response->json()[0];
                 return [
-                    'latitude' => $lat,
-                    'longitude' => $lon
+                    'latitude' => (float) $result['lat'],
+                    'longitude' => (float) $result['lon'],
                 ];
             }
+        } catch (\Exception $e) {
+            Log::debug('Geocoding gagal: ' . $e->getMessage());
         }
 
         return null;

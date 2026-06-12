@@ -59,6 +59,7 @@ class AuthController extends Controller
         $guruPembimbings = \Cache::remember('active_guru_pembimbings', 3600, function () {
             return GuruPembimbing::where('status', 'active')
                 ->select(['id', 'nama_guru', 'no_hp'])
+                ->orderBy('nama_guru')
                 ->get();
         });
         return view('auth.register', compact('guruPembimbings'));
@@ -75,6 +76,17 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
+        // Check if username and nama_lengkap combination already exists
+        $existingUser = User::where('username', $request->username)
+                            ->where('nama_lengkap', $request->nama_lengkap)
+                            ->first();
+
+        if ($existingUser) {
+            return back()->withErrors([
+                'username' => 'Kombinasi username dan nama sudah terdaftar! Gunakan username yang berbeda untuk membedakan akun.'
+            ])->withInput($request->except('password', 'password_confirmation'));
+        }
+
         $user = User::create([
             'nama_lengkap' => $request->nama_lengkap,
             'username' => $request->username,
@@ -87,6 +99,30 @@ class AuthController extends Controller
         Auth::login($user);
 
         return redirect()->route('student.dashboard')->with('success', 'Pendaftaran berhasil! Selamat datang.');
+    }
+
+    /**
+     * Check if username and nama_lengkap combination already exists
+     */
+    public function checkDuplicateUsernameAndNama(Request $request)
+    {
+        if (!$request->isJson()) {
+            return response()->json(['error' => 'Invalid request'], 400);
+        }
+
+        $username = $request->input('username');
+        $nama_lengkap = $request->input('nama_lengkap');
+
+        if (!$username || !$nama_lengkap) {
+            return response()->json(['isDuplicate' => false]);
+        }
+
+        // Check if combination exists
+        $exists = User::where('username', $username)
+                      ->where('nama_lengkap', $nama_lengkap)
+                      ->exists();
+
+        return response()->json(['isDuplicate' => $exists]);
     }
 
     /**
@@ -129,7 +165,18 @@ class AuthController extends Controller
      */
     public function showProfile()
     {
-        return view('auth.profile');
+        $exportGuruList = collect();
+        $exportKelasList = collect();
+
+        if (Auth::user()->isAdmin()) {
+            $exportGuruList = GuruPembimbing::orderBy('nama_guru')->get();
+
+            $exportKelasList = \App\Models\Kelas::with('jurusan')
+                ->orderBy('nama_kelas')
+                ->get();
+        }
+
+        return view('auth.profile', compact('exportGuruList', 'exportKelasList'));
     }
 
     /**
@@ -168,7 +215,9 @@ class AuthController extends Controller
 
         if ($user->isSiswa()) {
             $updateData['username'] = $request->username;
-            $updateData['email'] = User::internalEmailFromUsername($request->username);
+            if (empty($user->email) || str_ends_with($user->email, '@simagang.local')) {
+                $updateData['email'] = User::internalEmailFromUsername($request->username);
+            }
         }
 
         if ($request->filled('new_password')) {
@@ -191,9 +240,9 @@ class AuthController extends Controller
     {
         $user = Auth::user();
 
-        $guruPembimbings = GuruPembimbing::all();
-        $jurusans = \App\Models\Jurusan::all();
-        $kelas = \App\Models\Kelas::all();
+        $guruPembimbings = GuruPembimbing::orderBy('nama_guru')->get();
+        $jurusans = \App\Models\Jurusan::orderBy('nama_jurusan')->get();
+        $kelas = \App\Models\Kelas::orderBy('nama_kelas')->get();
         return view('auth.profile-edit', compact('guruPembimbings', 'jurusans', 'kelas'));
     }
 
