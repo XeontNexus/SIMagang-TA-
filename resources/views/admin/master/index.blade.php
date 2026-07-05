@@ -291,15 +291,15 @@
                                                 <div class="modal-body">
                                                     <div class="mb-3">
                                                         <label class="form-label">Nama Lengkap Guru *</label>
-                                                        <input type="text" name="nama_guru" class="form-control" value="{{ $guru->nama_guru }}" required>
+                                                        <input type="text" name="nama_guru" class="form-control" value="{{ $guru->nama_guru }}" required pattern="[A-Za-z\s.,']+" oninput="this.value = this.value.replace(/[^A-Za-z\s.,']/g, '')">
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label">NIP</label>
-                                                        <input type="text" name="nip" class="form-control" value="{{ $guru->nip }}">
+                                                        <input type="text" name="nip" class="form-control" value="{{ $guru->nip ?: '-' }}" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label">No. HP</label>
-                                                        <input type="text" name="no_hp" class="form-control" value="{{ $guru->no_hp }}">
+                                                        <input type="text" name="no_hp" class="form-control" value="{{ $guru->no_hp }}" inputmode="numeric" pattern="[0-9]*" maxlength="15" placeholder="62xxxxxxxxxxx" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 15)">
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label">Status *</label>
@@ -460,15 +460,15 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Nama Lengkap Guru *</label>
-                        <input type="text" name="nama_guru" class="form-control" required>
+                        <input type="text" name="nama_guru" class="form-control" required pattern="[A-Za-z\s.,']+" oninput="this.value = this.value.replace(/[^A-Za-z\s.,']/g, '')">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">NIP</label>
-                        <input type="text" name="nip" class="form-control">
+                        <input type="text" name="nip" class="form-control" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">No. HP</label>
-                        <input type="text" name="no_hp" class="form-control">
+                        <input type="text" name="no_hp" class="form-control" inputmode="numeric" pattern="[0-9]*" maxlength="15" placeholder="62xxxxxxxxxxx" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 15)">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Status *</label>

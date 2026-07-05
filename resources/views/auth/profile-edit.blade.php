@@ -19,7 +19,7 @@
                     <div class="mb-3">
                         <label for="nama_lengkap" class="form-label">Nama Lengkap</label>
                         <input type="text" class="form-control @error('nama_lengkap') is-invalid @enderror"
-                               id="nama_lengkap" name="nama_lengkap" value="{{ old('nama_lengkap', auth()->user()->nama_lengkap) }}" required>
+                               id="nama_lengkap" name="nama_lengkap" value="{{ old('nama_lengkap', auth()->user()->nama_lengkap) }}" required pattern="[A-Za-z\s.,']+" oninput="this.value = this.value.replace(/[^A-Za-z\s.,']/g, '')">
                         @error('nama_lengkap')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -48,15 +48,23 @@
                         <div class="col-md-6 mb-3">
                             <label for="nisn" class="form-label">NISN</label>
                             <input type="text" class="form-control @error('nisn') is-invalid @enderror"
-                                   id="nisn" name="nisn" value="{{ old('nisn', auth()->user()->nisn) }}">
+                                   id="nisn" name="nisn" value="{{ old('nisn', auth()->user()->nisn) }}" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                             @error('nisn')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="no_hp" class="form-label">No. HP</label>
-                            <input type="text" class="form-control @error('no_hp') is-invalid @enderror"
-                                   id="no_hp" name="no_hp" value="{{ old('no_hp', auth()->user()->no_hp) }}">
+                            <input type="text"
+                                   class="form-control @error('no_hp') is-invalid @enderror"
+                                   id="no_hp"
+                                   name="no_hp"
+                                   value="{{ old('no_hp', auth()->user()->no_hp) }}"
+                                   inputmode="numeric"
+                                   pattern="[0-9]*"
+                                   maxlength="16"
+                                   @if(auth()->user()->isAdmin()) placeholder="62xxxxxxxxxxxx" @endif
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 16)">
                             @error('no_hp')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -150,7 +158,7 @@
                     <div class="mb-3">
                         <label for="pembimbing_lapangan" class="form-label">Nama Pembimbing Lapangan</label>
                         <input type="text" class="form-control @error('pembimbing_lapangan') is-invalid @enderror"
-                               id="pembimbing_lapangan" name="pembimbing_lapangan" value="{{ old('pembimbing_lapangan', auth()->user()->pembimbing_lapangan) }}">
+                               id="pembimbing_lapangan" name="pembimbing_lapangan" value="{{ old('pembimbing_lapangan', auth()->user()->pembimbing_lapangan) }}" pattern="[A-Za-z\s.,']+" oninput="this.value = this.value.replace(/[^A-Za-z\s.,']/g, '')">
                         @error('pembimbing_lapangan')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -159,7 +167,14 @@
                     <div class="mb-3">
                         <label for="no_hp_pembimbing_lapangan" class="form-label">No. HP Pembimbing Lapangan</label>
                         <input type="text" class="form-control @error('no_hp_pembimbing_lapangan') is-invalid @enderror"
-                               id="no_hp_pembimbing_lapangan" name="no_hp_pembimbing_lapangan" value="{{ old('no_hp_pembimbing_lapangan', auth()->user()->no_hp_pembimbing_lapangan) }}">
+                               id="no_hp_pembimbing_lapangan"
+                               name="no_hp_pembimbing_lapangan"
+                               value="{{ old('no_hp_pembimbing_lapangan', auth()->user()->no_hp_pembimbing_lapangan) }}"
+                               inputmode="numeric"
+                               pattern="[0-9]*"
+                               maxlength="15"
+                               placeholder="62xxxxxxxxxxx"
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 15)">
                         @error('no_hp_pembimbing_lapangan')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -184,7 +199,14 @@
                     <div class="mb-3">
                         <label for="no_hp_guru_pembimbing" class="form-label">No. HP Guru Pembimbing</label>
                         <input type="text" class="form-control @error('no_hp_guru_pembimbing') is-invalid @enderror"
-                               id="no_hp_guru_pembimbing" name="no_hp_guru_pembimbing" value="{{ old('no_hp_guru_pembimbing', auth()->user()->no_hp_guru_pembimbing) }}">
+                               id="no_hp_guru_pembimbing"
+                               name="no_hp_guru_pembimbing"
+                               value="{{ old('no_hp_guru_pembimbing', auth()->user()->no_hp_guru_pembimbing) }}"
+                               inputmode="numeric"
+                               pattern="[0-9]*"
+                               maxlength="15"
+                               placeholder="62xxxxxxxxxxx"
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 15)">
                         @error('no_hp_guru_pembimbing')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror

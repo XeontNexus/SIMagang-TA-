@@ -81,13 +81,13 @@ class StudentController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_lengkap' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z\s\']+$/'],
+            'nama_lengkap' => ['required', 'string', 'max:100', 'regex:/^[\p{L}\s\'.,]+$/u'],
             'username'     => 'required|string|max:50|unique:users',
-            'no_hp'        => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
+            'no_hp'        => ['required', 'string', 'max:15', 'regex:/^62[0-9]{8,13}$/'],
             'password'     => 'required|string|min:6',
         ], [
-            'nama_lengkap.regex' => 'Nama lengkap hanya boleh berisi huruf, spasi, dan tanda apostrof (\').',
-            'no_hp.regex'        => 'Nomor WA harus dimulai dari 08 dan terdiri dari 10–13 digit angka.',
+            'nama_lengkap.regex' => 'Nama lengkap hanya boleh berisi huruf, spasi, titik, koma, dan tanda apostrof (\').',
+            'no_hp.regex'        => 'Nomor WA harus dimulai dari 62 dan terdiri dari 10–15 digit angka.',
         ]);
 
         $user = User::create([
@@ -120,12 +120,12 @@ class StudentController extends Controller
     public function update(Request $request, User $student)
     {
         $request->validate([
-            'nama_lengkap' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z\s\']+$/'],
+            'nama_lengkap' => ['required', 'string', 'max:100', 'regex:/^[\p{L}\s\'.,]+$/u'],
             'username'     => 'required|string|max:50|unique:users,username,' . $student->id,
-            'no_hp'        => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
+            'no_hp'        => ['required', 'string', 'max:15', 'regex:/^62[0-9]{8,13}$/'],
         ], [
-            'nama_lengkap.regex' => 'Nama lengkap hanya boleh berisi huruf, spasi, dan tanda apostrof (\').',
-            'no_hp.regex'        => 'Nomor WA harus dimulai dari 08 dan terdiri dari 10–13 digit angka.',
+            'nama_lengkap.regex' => 'Nama lengkap hanya boleh berisi huruf, spasi, titik, koma, dan tanda apostrof (\').',
+            'no_hp.regex'        => 'Nomor WA harus dimulai dari 62 dan terdiri dari 10–15 digit angka.',
         ]);
 
         $data = [

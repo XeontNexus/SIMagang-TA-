@@ -17,9 +17,9 @@ class GuruPembimbingController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_guru' => 'required|string|max:100',
-            'nip' => 'nullable|string|max:50|unique:guru_pembimbings',
-            'no_hp' => 'nullable|string|max:20',
+            'nama_guru' => ['required', 'string', 'max:100', 'regex:/^[\p{L}\s\'.,]+$/u'],
+            'nip' => ['nullable', 'string', 'max:20', 'regex:/^[0-9]*$/'],
+            'no_hp' => ['nullable', 'string', 'max:15', 'regex:/^62[0-9]{8,13}$/'],
             'status' => 'required|in:active,inactive'
         ]);
 
@@ -31,9 +31,9 @@ class GuruPembimbingController extends Controller
     public function update(Request $request, GuruPembimbing $guru)
     {
         $request->validate([
-            'nama_guru' => 'required|string|max:100',
-            'nip' => 'nullable|string|max:50|unique:guru_pembimbings,nip,' . $guru->id,
-            'no_hp' => 'nullable|string|max:20',
+            'nama_guru' => ['required', 'string', 'max:100', 'regex:/^[\p{L}\s\'.,]+$/u'],
+            'nip' => ['nullable', 'string', 'max:20', 'regex:/^[0-9]*$/', 'unique:guru_pembimbings,nip,' . $guru->id],
+            'no_hp' => ['nullable', 'string', 'max:15', 'regex:/^62[0-9]{8,13}$/'],
             'status' => 'required|in:active,inactive'
         ]);
 

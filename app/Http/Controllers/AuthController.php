@@ -265,18 +265,19 @@ class AuthController extends Controller
         $user = Auth::user();
 
         $rules = [
-            'nama_lengkap' => ['required', 'string', 'max:100'],
-            'no_hp' => ['nullable', 'string', 'max:20'],
+            'nama_lengkap' => ['required', 'string', 'max:100', 'regex:/^[\p{L}\s\'.,]+$/u'],
+            'no_hp' => ['nullable', 'string', 'max:15', 'regex:/^62[0-9]{8,13}$/'],
         ];
 
         if ($user->isAdmin()) {
             $rules['email'] = ['required', 'email', Rule::unique('users')->ignore($user->id)];
             $rules['username'] = ['required', 'string', 'max:50', Rule::unique('users')->ignore($user->id)];
+            $rules['no_hp'] = ['nullable', 'string', 'max:15', 'regex:/^62[0-9]{8,13}$/'];
         }
 
         if ($user->isStudent()) {
             $rules = array_merge($rules, [
-                'nisn' => ['required', 'string', 'max:20'],
+                'nisn' => ['required', 'string', 'max:20', 'regex:/^[0-9]+$/'],
                 'institusi' => ['nullable', 'string', 'max:100'],
                 'jurusan_id' => ['nullable', 'exists:jurusans,id'],
                 'kelas_id' => ['nullable', 'exists:kelas,id'],
@@ -284,10 +285,10 @@ class AuthController extends Controller
                 'alamat_magang' => ['nullable', 'string', 'max:255'],
                 'tanggal_mulai' => ['nullable', 'date'],
                 'tanggal_selesai' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
-                'pembimbing_lapangan' => ['nullable', 'string', 'max:100'],
-                'no_hp_pembimbing_lapangan' => ['nullable', 'string', 'max:20'],
+                'pembimbing_lapangan' => ['nullable', 'string', 'max:100', 'regex:/^[\p{L}\s\'.,]+$/u'],
+                'no_hp_pembimbing_lapangan' => ['nullable', 'string', 'max:15', 'regex:/^62[0-9]{8,13}$/'],
                 'guru_pembimbing_id' => ['nullable', 'exists:guru_pembimbings,id'],
-                'no_hp_guru_pembimbing' => ['nullable', 'string', 'max:20'],
+                'no_hp_guru_pembimbing' => ['nullable', 'string', 'max:15', 'regex:/^62[0-9]{8,13}$/'],
             ]);
         }
 
