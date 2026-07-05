@@ -244,22 +244,9 @@
                     @endif
                 </div>
                 
-                <!-- APK Version & Logout -->
-                <!-- APK Version Info - di atas border -->
-                <div class="text-center text-white-50 px-3 pt-2 pb-1" style="font-size: 0.8rem;">
+                <div class="text-center text-white-50 px-3 pt-2 pb-3" style="font-size: 0.8rem;">
                     <i class="fas fa-mobile-alt me-1"></i>
                     Versi APK {{ config('app.apk_version', '1.0.0') }}
-                </div>
-                
-                <!-- Border & Logout Button -->
-                <div class="p-3 border-top border-white-20">
-                    <!-- Logout Button -->
-                    <form id="logout-form" method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="button" class="btn btn-outline-light w-100 btn-logout-hover" onclick="confirmLogout()">
-                            <i class="fas fa-sign-out-alt me-2"></i>Logout
-                        </button>
-                    </form>
                 </div>
             </div>
         </div>

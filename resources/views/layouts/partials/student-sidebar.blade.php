@@ -41,6 +41,16 @@
             </span>
         @endif
     </li>
+
+    <li class="nav-item mt-3">
+        <button type="button" class="nav-link w-100 text-start border-0" style="background: transparent;" onclick="confirmLogout()">
+            <i class="fas fa-sign-out-alt"></i>
+            Logout
+        </button>
+        <form id="logout-form" method="POST" action="{{ route('logout') }}" class="d-none">
+            @csrf
+        </form>
+    </li>
 </ul>
 
 @if(!empty($adminContactPhone))
