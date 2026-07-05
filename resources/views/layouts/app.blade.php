@@ -125,6 +125,7 @@
             margin-top: 4.375rem;
             height: calc(100vh - 4.375rem);
             overflow-y: auto;
+            padding-bottom: 2rem;
         }
         
         .border-white-20 {
@@ -172,6 +173,7 @@
             
             .main-content {
                 margin-left: 0 !important;
+                padding-bottom: 4.5rem !important;
             }
         }
         
@@ -347,7 +349,7 @@
             @endauth
             
             <!-- Page Content -->
-            <div class="container-fluid p-4">
+            <div class="container-fluid p-4 pb-5">
                 @auth
                     @if(!request()->routeIs('admin.dashboard') && !request()->routeIs('student.dashboard'))
                         <div class="d-flex align-items-center mb-3">

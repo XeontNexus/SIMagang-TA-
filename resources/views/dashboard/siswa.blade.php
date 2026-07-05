@@ -49,7 +49,7 @@
         
         .main-content {
             margin-left: 280px;
-            padding: 2.5rem;
+            padding: 2.5rem 2.5rem 4rem;
             flex: 1;
             min-height: calc(100vh - 60px);
         }
@@ -241,7 +241,7 @@
             
             .main-content {
                 margin-left: 0;
-                padding: 1rem;
+                padding: 1rem 1rem 4.5rem;
             }
             
             .footer {
