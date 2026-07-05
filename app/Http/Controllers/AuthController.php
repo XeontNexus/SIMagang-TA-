@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use App\Services\NotificationService;
 
 class AuthController extends Controller
 {
@@ -97,6 +98,16 @@ class AuthController extends Controller
         ]);
 
         Auth::login($user);
+
+        NotificationService::notifyAllAdmins(
+            'Pendaftaran Siswa Baru',
+            "{$user->nama_lengkap} mendaftar sebagai siswa magang (menunggu approval).",
+            'warning',
+            'fa-user-plus',
+            route('admin.pending-approvals'),
+            'student_registration',
+            $user->id
+        );
 
         return redirect()->route('student.dashboard')->with('success', 'Pendaftaran berhasil! Selamat datang.');
     }

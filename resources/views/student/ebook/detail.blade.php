@@ -26,7 +26,7 @@
                     @endif
                     <div>
                         <h5 class="mb-1 fw-bold">{{ $user->nama_lengkap }}</h5>
-                        <p class="mb-0 text-muted">{{ $user->kelas->nama_kelas ?? '-' }} | {{ $user->jurusan->nama_jurusan ?? '-' }}</p>
+                        <p class="mb-0 text-muted">{{ $user->kelas?->nama_kelas ?? '-' }} | {{ $user->jurusan?->nama_jurusan ?? '-' }}</p>
                         <p class="mb-0 text-muted small"><i class="fas fa-building me-1"></i>{{ $user->institusi ?? '-' }}</p>
                     </div>
                 </div>

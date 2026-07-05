@@ -182,7 +182,10 @@
                                                 <div class="modal-body">
                                                     <div class="mb-3">
                                                         <label class="form-label">Nama Kelas *</label>
-                                                        <input type="text" name="nama_kelas" class="form-control" value="{{ $k->nama_kelas }}" required>
+                                                        <input type="text" name="nama_kelas" class="form-control" value="{{ $k->nama_kelas }}"
+                                                               maxlength="2" pattern="[a-zA-Z0-9]{1,2}" placeholder="Maks. 2 karakter"
+                                                               oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'').substring(0,2)" required>
+                                                        <small class="text-muted">Huruf atau angka, maks. 2 karakter</small>
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label">Tingkat *</label>
@@ -411,7 +414,10 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Nama Kelas *</label>
-                        <input type="text" name="nama_kelas" class="form-control" required>
+                        <input type="text" name="nama_kelas" class="form-control"
+                               maxlength="2" pattern="[a-zA-Z0-9]{1,2}" placeholder="Maks. 2 karakter"
+                               oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'').substring(0,2)" required>
+                        <small class="text-muted">Huruf atau angka, maks. 2 karakter</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Tingkat *</label>

@@ -415,6 +415,13 @@
     @endif
 
     <script>
+        // Prevent browser back/forward cache (bfcache) after logout
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+                window.location.reload();
+            }
+        });
+
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');
             document.getElementById('sidebarOverlay').classList.toggle('show');

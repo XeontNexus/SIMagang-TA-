@@ -7,8 +7,8 @@ use App\Models\Presensi;
 use App\Models\JadwalPresensi;
 use App\Models\Setting;
 use App\Models\LocationChangeRequest;
-use App\Models\StudentNotification;
 use App\Helpers\LocationHelper;
+use App\Services\NotificationService;
 use App\Services\PresensiRetentionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -107,12 +107,14 @@ class PresensiController extends Controller
                 ->with('error', 'Anda sudah melakukan presensi hari ini.');
         }
 
-        if (!$user->gmap_magang || !$user->latitude || !$user->longitude) {
-            return redirect()->route('student.presensi.index')
-                ->with('error', 'Anda belum mengisi link Google Maps lokasi magang. Isi terlebih dahulu di halaman Presensi.');
-        }
-
+        // Untuk status izin/sakit: lewati semua pengecekan lokasi/GPS
         if ($request->status === 'hadir') {
+            // Validasi: wajib punya data lokasi magang terdaftar
+            if (!$user->gmap_magang || !$user->latitude || !$user->longitude) {
+                return redirect()->route('student.presensi.index')
+                    ->with('error', 'Anda belum mengisi link Google Maps lokasi magang. Isi terlebih dahulu di halaman Presensi.');
+            }
+
             if (!$request->latitude || !$request->longitude) {
                 return redirect()->route('student.presensi.index')
                     ->with('error', 'Lokasi GPS tidak terdeteksi. Pastikan GPS aktif dan izinkan akses lokasi.');
@@ -277,11 +279,15 @@ class PresensiController extends Controller
 
             \App\Services\NotificationService::notifyLocationChangeRequest($locationRequest);
 
-            StudentNotification::notify(
+            NotificationService::create(
                 $user->id,
                 'Permintaan Terkirim',
                 'Permintaan ubah titik koordinat lokasi magang telah dikirim ke admin. Tunggu persetujuan.',
-                'info'
+                'info',
+                'fa-map-pin',
+                null,
+                'location_change_request',
+                $locationRequest->id
             );
 
             return response()->json([

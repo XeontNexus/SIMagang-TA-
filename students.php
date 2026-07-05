@@ -243,7 +243,12 @@ include 'includes/header.php';
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Password <?= $editStudent ? '(Kosongkan jika tidak ingin mengubah)' : '' ?></label>
-                        <input type="password" name="password" class="form-control" <?= $editStudent ? '' : 'required' ?>>
+                        <div class="input-group">
+                            <input type="password" name="password" id="password" class="form-control" <?= $editStudent ? '' : 'required' ?>>
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('password', 'toggleIcon')">
+                                <i class="fas fa-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -453,4 +458,19 @@ include 'includes/header.php';
     </div>
 </div>
 
+<script>
+    function togglePassword(inputId, iconId) {
+        const passwordInput = document.getElementById(inputId);
+        const toggleIcon = document.getElementById(iconId);
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+        }
+    }
+</script>
 <?php include 'includes/footer.php'; ?>

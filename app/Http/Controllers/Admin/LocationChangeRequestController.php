@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LocationChangeRequest;
-use App\Models\StudentNotification;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,11 +46,15 @@ class LocationChangeRequestController extends Controller
 
         NotificationService::markRelatedAsRead('location_change_request', $locationRequest->id);
 
-        StudentNotification::notify(
+        NotificationService::create(
             $student->id,
             'Perubahan Lokasi Disetujui',
             'Admin menyetujui perubahan titik koordinat lokasi magang Anda. Koordinat baru sudah aktif.',
-            'success'
+            'success',
+            'fa-map-marker-alt',
+            null,
+            'location_change_request',
+            $locationRequest->id
         );
 
         return back()->with('success', 'Permintaan perubahan lokasi disetujui.');
@@ -74,11 +77,15 @@ class LocationChangeRequestController extends Controller
 
         NotificationService::markRelatedAsRead('location_change_request', $locationRequest->id);
 
-        StudentNotification::notify(
+        NotificationService::create(
             $locationRequest->user_id,
             'Perubahan Lokasi Ditolak',
             'Admin menolak perubahan titik koordinat: ' . $request->admin_note,
-            'danger'
+            'danger',
+            'fa-map-marker-alt',
+            null,
+            'location_change_request',
+            $locationRequest->id
         );
 
         return back()->with('success', 'Permintaan perubahan lokasi ditolak.');

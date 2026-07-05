@@ -8,6 +8,7 @@ use App\Mail\StudentAccountInfo;
 use App\Mail\StudentAccountUpdated;
 use App\Mail\StudentPasswordReset;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -24,8 +25,8 @@ class StudentController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%")
                   ->orWhere('username', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('institusi', 'like', "%{$search}%");
+                  ->orWhere('no_hp', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -47,7 +48,7 @@ class StudentController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%")
                   ->orWhere('username', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('no_hp', 'like', "%{$search}%")
                   ->orWhere('institusi', 'like', "%{$search}%")
                   ->orWhere('mitra_magang', 'like', "%{$search}%");
             });
@@ -80,10 +81,13 @@ class StudentController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_lengkap' => 'required|string|max:100',
-            'username' => 'required|string|max:50|unique:users',
-            'no_hp' => 'required|string|max:20',
-            'password' => 'required|string|min:6',
+            'nama_lengkap' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z\s\']+$/'],
+            'username'     => 'required|string|max:50|unique:users',
+            'no_hp'        => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
+            'password'     => 'required|string|min:6',
+        ], [
+            'nama_lengkap.regex' => 'Nama lengkap hanya boleh berisi huruf, spasi, dan tanda apostrof (\').',
+            'no_hp.regex'        => 'Nomor WA harus dimulai dari 08 dan terdiri dari 10–13 digit angka.',
         ]);
 
         $user = User::create([
@@ -94,7 +98,7 @@ class StudentController extends Controller
             'password' => Hash::make($request->password),
             'password_plain' => $request->password,
             'role' => 'siswa',
-            'status' => 'menunggu',
+            'status' => 'belum_dinotifikasi',
         ]);
 
         return redirect()
@@ -116,9 +120,12 @@ class StudentController extends Controller
     public function update(Request $request, User $student)
     {
         $request->validate([
-            'nama_lengkap' => 'required|string|max:100',
-            'username' => 'required|string|max:50|unique:users,username,' . $student->id,
-            'no_hp' => 'required|string|max:20',
+            'nama_lengkap' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z\s\']+$/'],
+            'username'     => 'required|string|max:50|unique:users,username,' . $student->id,
+            'no_hp'        => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
+        ], [
+            'nama_lengkap.regex' => 'Nama lengkap hanya boleh berisi huruf, spasi, dan tanda apostrof (\').',
+            'no_hp.regex'        => 'Nomor WA harus dimulai dari 08 dan terdiri dari 10–13 digit angka.',
         ]);
 
         $data = [
@@ -156,7 +163,57 @@ class StudentController extends Controller
         }
     }
 
-    // Pending Approvals
+    /**
+     * Hapus banyak siswa sekaligus (bulk delete)
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $students = User::where('role', 'siswa')->whereIn('id', $request->ids)->get();
+
+        $deleted = 0;
+        $errors  = [];
+
+        foreach ($students as $student) {
+            try {
+                $student->presensis()->delete();
+                $student->logbooks()->delete();
+                $student->jadwalPresensis()->delete();
+                $student->delete();
+                $deleted++;
+            } catch (\Exception $e) {
+                $errors[] = $student->nama_lengkap . ': ' . $e->getMessage();
+                Log::error('Gagal menghapus siswa ' . $student->id . ': ' . $e->getMessage());
+            }
+        }
+
+        $msg = "$deleted akun siswa berhasil dihapus.";
+        if (!empty($errors)) {
+            $msg .= ' ' . count($errors) . ' gagal dihapus.';
+        }
+
+        return redirect()->route('admin.students.index')->with(
+            empty($errors) ? 'success' : 'warning',
+            $msg
+        );
+    }
+
+    /**
+     * Tandai siswa sudah dinotifikasi: status belum_dinotifikasi → menunggu
+     */
+    public function markAsNotified(User $student)
+    {
+        if ($student->status === 'belum_dinotifikasi') {
+            $student->update(['status' => 'menunggu']);
+        }
+        return back()->with('success', "Akun {$student->nama_lengkap} ditandai sudah dinotifikasi (status → Menunggu).");
+    }
+
+
     public function pendingApprovals()
     {
         $students = User::where('role', 'siswa')
@@ -170,12 +227,36 @@ class StudentController extends Controller
     public function approve(User $student)
     {
         $student->update(['status' => 'menunggu']);
+
+        NotificationService::create(
+            $student->id,
+            'Pendaftaran Disetujui',
+            'Pendaftaran akun Anda telah disetujui oleh Admin. Silakan lengkapi profil Anda.',
+            'success',
+            'fa-user-check',
+            route('profile.edit'),
+            'student_approval',
+            $student->id
+        );
+
         return redirect()->route('admin.pending-approvals')->with('success', 'Siswa berhasil disetujui!');
     }
 
     public function reject(User $student)
     {
         $student->update(['status' => 'rejected']);
+
+        NotificationService::create(
+            $student->id,
+            'Pendaftaran Ditolak',
+            'Pendaftaran akun Anda ditolak oleh Admin.',
+            'danger',
+            'fa-user-times',
+            null,
+            'student_rejection',
+            $student->id
+        );
+
         return redirect()->route('admin.pending-approvals')->with('success', 'Siswa berhasil ditolak!');
     }
 
@@ -223,7 +304,10 @@ class StudentController extends Controller
 
         try {
             Mail::to($student->email)->send(new StudentAccountInfo($student));
-            return back()->with('success', 'Informasi akun berhasil dikirim ke email ' . $student->email);
+            if ($student->status === 'belum_dinotifikasi') {
+                $student->update(['status' => 'menunggu']);
+            }
+            return back()->with('success', 'Informasi akun berhasil dikirim ke email ' . $student->email . ' dan status diubah ke Menunggu.');
         } catch (\Exception $e) {
             Log::error('Gagal mengirim email info akun: ' . $e->getMessage());
             return back()->with('error', 'Gagal mengirim email: ' . $e->getMessage());
@@ -231,18 +315,18 @@ class StudentController extends Controller
     }
 
     /**
-     * Kirim informasi akun ke semua siswa dengan status tertentu
+     * Kirim informasi akun ke semua siswa dengan status belum_dinotifikasi
      */
     public function sendAccountInfoAll()
     {
         $students = User::where('role', 'siswa')
-            ->where('status', 'menunggu')
+            ->where('status', 'belum_dinotifikasi')
             ->whereNotNull('email')
             ->where('email', 'not like', '%@simagang.local')
             ->get();
 
         if ($students->isEmpty()) {
-            return back()->with('info', 'Tidak ada siswa dengan status menunggu yang memiliki email.');
+            return back()->with('info', 'Tidak ada siswa dengan status Belum Dinotifikasi yang memiliki email.');
         }
 
         $sent = 0;
@@ -252,6 +336,7 @@ class StudentController extends Controller
         foreach ($students as $student) {
             try {
                 Mail::to($student->email)->send(new StudentAccountInfo($student));
+                $student->update(['status' => 'menunggu']);
                 $sent++;
             } catch (\Exception $e) {
                 $failed++;
@@ -260,7 +345,7 @@ class StudentController extends Controller
             }
         }
 
-        $message = "Informasi akun berhasil dikirim ke $sent siswa via email.";
+        $message = "Informasi akun berhasil dikirim ke $sent siswa via email dan status diubah ke Menunggu.";
         if ($failed > 0) {
             $message .= " $failed gagal dikirim.";
         }

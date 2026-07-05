@@ -4,6 +4,31 @@
 @section('page-title', 'Daftar List Siswa')
 
 @section('content')
+<style>
+    .address-text {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+    .address-text.expanded {
+        display: block;
+        -webkit-line-clamp: unset;
+        overflow: visible;
+    }
+    .toggle-address-btn {
+        font-size: 0.75rem;
+        cursor: pointer;
+        color: #0d6efd;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 2px;
+    }
+    .toggle-address-btn:hover {
+        text-decoration: underline;
+    }
+</style>
 <div class="card shadow">
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">Daftar List Informasi Siswa Magang</h6>
@@ -23,9 +48,6 @@
                     <option value="menunggu" {{ request('status') == 'menunggu' ? 'selected' : '' }}>Menunggu</option>
                     <option value="proses" {{ request('status') == 'proses' ? 'selected' : '' }}>Proses</option>
                     <option value="aktif" {{ request('status') == 'aktif' ? 'selected' : '' }}>Aktif</option>
-                    <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Non-Aktif</option>
-                    <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Selesai</option>
-                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -114,8 +136,14 @@
                                     <span class="text-muted">-</span>
                                 @endif
                             </td>
-                            <td class="align-middle small">
-                                {{ $student->alamat_magang ?? '-' }}
+                            <td class="align-middle small" style="min-width:140px;max-width:180px;">
+                                @if($student->alamat_magang)
+                                    @php $addrId = 'addr-' . $student->id; @endphp
+                                    <div id="{{ $addrId }}" class="address-text">{{ $student->alamat_magang }}</div>
+                                    <a href="#" class="toggle-address-btn" onclick="toggleAddress('{{ $addrId }}', this); return false;">Selengkapnya</a>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
                             </td>
                             <td class="align-middle text-center">
                                 @php
@@ -153,6 +181,17 @@
 
 @push('scripts')
 <script>
+    function toggleAddress(id, btn) {
+        const el = document.getElementById(id);
+        if (el.classList.contains('expanded')) {
+            el.classList.remove('expanded');
+            btn.textContent = 'Selengkapnya';
+        } else {
+            el.classList.add('expanded');
+            btn.textContent = 'Lihat Sedikit';
+        }
+    }
+
     const filterForm = document.getElementById('filterForm');
     const searchInput = document.getElementById('searchInput');
     const statusFilter = document.getElementById('statusFilter');

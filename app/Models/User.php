@@ -22,8 +22,6 @@ class User extends Authenticatable
         'institusi',
         'mitra_magang',
         'mitra_id',
-        'jurusan',
-        'kelas',
         'tanggal_mulai',
         'tanggal_selesai',
         'status',
@@ -83,6 +81,40 @@ class User extends Authenticatable
     public function jurusan()
     {
         return $this->belongsTo(Jurusan::class);
+    }
+
+    /**
+     * Override raw 'kelas' varchar DB column to always return the Kelas relationship model.
+     * The users table may have a legacy 'kelas' string column that shadows the relationship;
+     * this accessor ensures $user->kelas always returns the Kelas model (or null).
+     */
+    public function getKelasAttribute()
+    {
+        if ($this->relationLoaded('kelas')) {
+            return $this->getRelation('kelas');
+        }
+        if ($this->kelas_id) {
+            $result = Kelas::find($this->kelas_id);
+            $this->setRelation('kelas', $result);
+            return $result;
+        }
+        return null;
+    }
+
+    /**
+     * Override raw 'jurusan' varchar DB column to always return the Jurusan relationship model.
+     */
+    public function getJurusanAttribute()
+    {
+        if ($this->relationLoaded('jurusan')) {
+            return $this->getRelation('jurusan');
+        }
+        if ($this->jurusan_id) {
+            $result = Jurusan::find($this->jurusan_id);
+            $this->setRelation('jurusan', $result);
+            return $result;
+        }
+        return null;
     }
 
     public function mitra()

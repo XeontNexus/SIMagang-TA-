@@ -269,5 +269,13 @@
         // Disable button
         btn.disabled = true;
     });
+
+    // Trap browser back button on login page to prevent going back to authenticated pages after logout
+    (function () {
+        window.history.pushState(null, "", window.location.href);
+        window.addEventListener('popstate', function () {
+            window.history.pushState(null, "", window.location.href);
+        });
+    })();
 </script>
 @endsection

@@ -125,8 +125,9 @@ class ExportController extends Controller
         $row = 2;
         foreach ($logbooks as $index => $logbook) {
             $user = $logbook->user;
-            $kelasLabel = $user?->kelas
-                ? trim(($user->kelas->tingkat ?? '') . ' ' . ($user->kelas->nama_kelas ?? ''))
+            $kelasObj = $user?->kelas;
+            $kelasLabel = $kelasObj
+                ? trim(($kelasObj->tingkat ?? '') . ' ' . ($kelasObj->nama_kelas ?? ''))
                 : '-';
 
             $sheet->fromArray([
@@ -134,7 +135,7 @@ class ExportController extends Controller
                 $user?->nama_lengkap ?? '-',
                 $user?->nisn ?? '-',
                 $user?->institusi ?? '-',
-                $user?->jurusan?->nama_jurusan ?? $user?->jurusan ?? '-',
+                $user?->jurusan?->nama_jurusan ?? '-',
                 $kelasLabel,
                 $user?->mitra_magang ?? '-',
                 $logbook->minggu_ke,
@@ -175,7 +176,12 @@ class ExportController extends Controller
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle(mb_substr($sheetTitle, 0, 31));
+        $cleanTitle = str_replace(['\\', '/', '?', '*', ':', '[', ']'], '', $sheetTitle);
+        $cleanTitle = mb_substr($cleanTitle, 0, 31);
+        if (trim($cleanTitle) === '') {
+            $cleanTitle = 'Siswa';
+        }
+        $sheet->setTitle($cleanTitle);
 
         $headers = [
             'No', 'Nama Lengkap', 'NISN', 'Username', 'Institusi', 'Jurusan', 'Kelas',
@@ -187,9 +193,10 @@ class ExportController extends Controller
 
         $row = 2;
         foreach ($students as $index => $student) {
-            $kelasLabel = $student->kelas
-                ? trim(($student->kelas->tingkat ?? '') . ' ' . ($student->kelas->nama_kelas ?? ''))
-                : ($student->kelas ?? '-');
+            $kelasObj = $student->kelas;
+            $kelasLabel = $kelasObj
+                ? trim(($kelasObj->tingkat ?? '') . ' ' . ($kelasObj->nama_kelas ?? ''))
+                : '-';
 
             $sheet->fromArray([
                 $index + 1,
@@ -197,7 +204,7 @@ class ExportController extends Controller
                 $student->nisn ?? '-',
                 $student->username,
                 $student->institusi ?? '-',
-                $student->jurusan?->nama_jurusan ?? $student->jurusan ?? '-',
+                $student->jurusan?->nama_jurusan ?? '-',
                 $kelasLabel,
                 $student->mitra_magang ?? '-',
                 $student->alamat_magang ?? '-',

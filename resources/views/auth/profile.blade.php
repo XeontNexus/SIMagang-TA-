@@ -34,11 +34,11 @@
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-4 fw-bold">Jurusan</div>
-                    <div class="col-md-8">{{ auth()->user()->jurusan()->first()?->nama_jurusan ?? auth()->user()->jurusan ?? '-' }}</div>
+                    <div class="col-md-8">{{ auth()->user()->jurusan?->nama_jurusan ?? '-' }}</div>
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-4 fw-bold">Kelas</div>
-                    <div class="col-md-8">{{ auth()->user()->kelas()->first()?->nama_kelas ?? auth()->user()->kelas ?? '-' }}</div>
+                    <div class="col-md-8">{{ auth()->user()->kelas?->nama_kelas ?? '-' }}</div>
                 </div>
                 @else
                 <div class="row mb-3">

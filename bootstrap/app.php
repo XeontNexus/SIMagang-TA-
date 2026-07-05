@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'api.key' => \App\Http\Middleware\ApiKeyMiddleware::class,
         ]);
+        $middleware->web(append: [
+            \App\Http\Middleware\PreventBackHistory::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->renderable(function (\Illuminate\Session\TokenMismatchException $e, $request) {

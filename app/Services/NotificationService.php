@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\LocationChangeRequest;
 use App\Models\Logbook;
 use App\Models\Notification;
-use App\Models\StudentNotification;
 use App\Models\User;
 
 class NotificationService
@@ -17,15 +16,7 @@ class NotificationService
 
     public static function getNavbarBadgeCount(User $user): int
     {
-        $count = self::getUnreadCount($user->id);
-
-        if ($user->isSiswa()) {
-            $count += StudentNotification::where('user_id', $user->id)
-                ->whereNull('read_at')
-                ->count();
-        }
-
-        return $count;
+        return self::getUnreadCount($user->id);
     }
 
     public static function getUnreadNotifications($userId, $limit = null)
@@ -36,7 +27,7 @@ class NotificationService
     }
 
     /**
-     * Gabungkan notifikasi dari tabel notifications + student_notifications (data lama).
+     * Get bell items.
      */
     public static function getBellItems(?User $user, int $limit = 8)
     {
@@ -44,9 +35,10 @@ class NotificationService
             return collect();
         }
 
-        $items = Notification::forUser($user->id)
+        return Notification::forUser($user->id)
             ->unread()
             ->recent()
+            ->limit($limit)
             ->get()
             ->map(fn ($n) => (object) [
                 'id' => $n->id,
@@ -58,51 +50,15 @@ class NotificationService
                 'link' => $n->link,
                 'created_at' => $n->created_at,
             ]);
-
-        if ($user->isSiswa()) {
-            $legacy = StudentNotification::where('user_id', $user->id)
-                ->whereNull('read_at')
-                ->orderByDesc('created_at')
-                ->get()
-                ->map(fn ($n) => (object) [
-                    'id' => $n->id,
-                    'source' => 'student',
-                    'title' => $n->title,
-                    'message' => $n->message,
-                    'type' => $n->type,
-                    'icon' => 'fa-bell',
-                    'link' => null,
-                    'created_at' => $n->created_at,
-                ]);
-
-            $items = $items->concat($legacy);
-        }
-
-        return $items->sortByDesc('created_at')->take($limit)->values();
     }
 
     public static function markAllAsReadForUser(User $user): void
     {
         Notification::forUser($user->id)->unread()->update(['read_at' => now()]);
-
-        if ($user->isSiswa()) {
-            StudentNotification::where('user_id', $user->id)
-                ->whereNull('read_at')
-                ->update(['read_at' => now()]);
-        }
     }
 
     public static function markBellItemAsRead(User $user, string $source, int $id): bool
     {
-        if ($source === 'student' && $user->isSiswa()) {
-            $item = StudentNotification::where('user_id', $user->id)->find($id);
-            if ($item) {
-                $item->update(['read_at' => now()]);
-                return true;
-            }
-            return false;
-        }
-
         $item = Notification::forUser($user->id)->find($id);
         if ($item) {
             $item->markAsRead();
@@ -218,9 +174,10 @@ class NotificationService
 
         $logbooks = Logbook::where('status', 'submitted')
             ->with('user')
+            ->latest()
+            ->limit(5)
             ->get()
-            ->sortBy(fn ($logbook) => $logbook->user?->nama_lengkap ?? '')
-            ->take(5);
+            ->sortBy(fn ($logbook) => $logbook->user?->nama_lengkap ?? '');
 
         foreach ($logbooks as $logbook) {
             $items[] = [
@@ -235,9 +192,10 @@ class NotificationService
 
         $locationRequests = LocationChangeRequest::where('status', 'pending')
             ->with('user')
+            ->latest()
+            ->limit(5)
             ->get()
-            ->sortBy(fn ($request) => $request->user?->nama_lengkap ?? '')
-            ->take(5);
+            ->sortBy(fn ($request) => $request->user?->nama_lengkap ?? '');
 
         foreach ($locationRequests as $request) {
             $items[] = [

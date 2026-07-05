@@ -32,7 +32,7 @@
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <h6 class="mb-0 fw-bold">{{ $student->nama_lengkap }}</h6>
-                                <small class="text-muted">{{ $student->kelas->nama_kelas ?? '-' }}</small>
+                                <small class="text-muted">{{ $student->kelas?->nama_kelas ?? '-' }}</small>
                             </div>
                         </div>
                         <div class="mb-3">

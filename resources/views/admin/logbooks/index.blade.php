@@ -30,9 +30,9 @@
     </div>
     <div class="card-body">
         <!-- Filter Form -->
-        <form method="GET" class="row g-3 mb-4">
+        <form method="GET" action="{{ route('admin.logbooks.index') }}" class="row g-3 mb-4" id="approvalFilterForm">
             <div class="col-md-4">
-                <select name="status" class="form-select">
+                <select name="status" class="form-select" id="statusApprovalFilter">
                     <option value="">Semua Status</option>
                     <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
                     <option value="submitted" {{ request('status') == 'submitted' ? 'selected' : '' }}>Submitted (Menunggu ACC)</option>
@@ -286,14 +286,34 @@
         alert('Untuk reject multiple, gunakan form reject individual untuk memberikan catatan spesifik ke setiap siswa.');
     }
 
-    // Real-time search
-    document.getElementById('searchLogbook').addEventListener('keyup', function() {
-        // Auto-submit setelah delay
-        clearTimeout(window.searchTimeout);
-        window.searchTimeout = setTimeout(() => {
-            document.querySelector('form').submit();
-        }, 500);
-    });
+    // Auto-submit filter saat status berubah
+    const statusApprovalFilter = document.getElementById('statusApprovalFilter');
+    if (statusApprovalFilter) {
+        statusApprovalFilter.addEventListener('change', function() {
+            document.getElementById('approvalFilterForm').submit();
+        });
+    }
+
+    // Real-time search dengan delay
+    const searchLogbookInput = document.getElementById('searchLogbook');
+    if (searchLogbookInput) {
+        searchLogbookInput.addEventListener('keyup', function() {
+            clearTimeout(window.searchTimeout);
+            window.searchTimeout = setTimeout(() => {
+                document.getElementById('approvalFilterForm').submit();
+            }, 500);
+        });
+    }
+    // Auto-aktifkan tab berdasarkan query param ?tab=
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab === 'data') {
+        const dataTabEl = document.getElementById('data-tab');
+        if (dataTabEl) {
+            const tabInstance = new bootstrap.Tab(dataTabEl);
+            tabInstance.show();
+        }
+    }
 </script>
 @endpush
     </div><!-- End Tab Approval -->
@@ -309,6 +329,7 @@
             <div class="card-body">
                 <!-- Filter Search -->
                 <form method="GET" action="{{ route('admin.logbooks.index') }}" class="row g-3 mb-4">
+                    <input type="hidden" name="tab" value="data">
                     <div class="col-md-8">
                         <input type="text" name="search" class="form-control" placeholder="Cari nama siswa..." 
                                value="{{ request('search') }}" id="searchStudentData">
@@ -335,7 +356,13 @@
                                         <div class="w-100">
                                             <div class="fw-bold">{{ $student->nama_lengkap }}</div>
                                             <small class="text-muted">
-                                                <i class="fas fa-book me-1"></i>{{ $studentLogbooks->count() }} Logbook
+                                                @if($student->kelas)
+                                                    <span class="me-2"><i class="fas fa-chalkboard me-1"></i>{{ $student->kelas->tingkat }}-{{ $student->kelas->nama_kelas }}</span>
+                                                @endif
+                                                @if($student->jurusan)
+                                                    <span class="me-2"><i class="fas fa-graduation-cap me-1"></i>{{ $student->jurusan->nama_jurusan }}</span>
+                                                @endif
+                                                <span><i class="fas fa-book me-1"></i>{{ $studentLogbooks->count() }} Logbook</span>
                                             </small>
                                         </div>
                                     </button>
@@ -384,11 +411,11 @@
                                                                             </div>
                                                                             <div class="col-md-6">
                                                                                 <label class="text-muted small">Kelas</label>
-                                                                                <p class="fw-bold">{{ $student->kelas->nama_kelas ?? '-' }}</p>
+                                                                                <p class="fw-bold">{{ $student->kelas ? ($student->kelas->tingkat . '-' . $student->kelas->nama_kelas) : '-' }}</p>
                                                                             </div>
                                                                             <div class="col-md-6">
                                                                                 <label class="text-muted small">Jurusan</label>
-                                                                                <p class="fw-bold">{{ $student->kelas->jurusan->nama_jurusan ?? '-' }}</p>
+                                                                                <p class="fw-bold">{{ $student->jurusan?->nama_jurusan ?? '-' }}</p>
                                                                             </div>
                                                                             <div class="col-md-6">
                                                                                 <label class="text-muted small">Guru Pembimbing</label>

@@ -47,8 +47,8 @@
                         <p class="fw-semibold mb-0">{{ $student->username }}</p>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted small mb-0">Email</label>
-                        <p class="fw-semibold mb-0"><i class="fas fa-envelope me-1 text-primary"></i>{{ $student->email && !str_ends_with($student->email, '@simagang.local') ? $student->email : '-' }}</p>
+                        <label class="form-label text-muted small mb-0">Nomor Telepon</label>
+                        <p class="fw-semibold mb-0"><i class="fas fa-phone me-1 text-primary"></i>{{ $student->no_hp ?? '-' }}</p>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label text-muted small mb-0">NISN</label>
@@ -64,7 +64,7 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label text-muted small mb-0">Jurusan</label>
-                        <p class="fw-semibold mb-0">{{ $student->jurusan?->nama_jurusan ?? $student->jurusan ?? '-' }}</p>
+                        <p class="fw-semibold mb-0">{{ $student->jurusan?->nama_jurusan ?? '-' }}</p>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label text-muted small mb-0">Kelas</label>

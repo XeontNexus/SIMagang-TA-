@@ -53,8 +53,8 @@ function openAdminWhatsApp(event) {
         $nama = $user->nama_lengkap ?? 'Siswa';
         $kelasLabel = $user->kelas
             ? trim(($user->kelas->tingkat ?? '') . ' ' . ($user->kelas->nama_kelas ?? ''))
-            : ($user->kelas ?? '-');
-        $jurusanLabel = $user->jurusan?->nama_jurusan ?? $user->jurusan ?? '-';
+            : '-';
+        $jurusanLabel = $user->jurusan?->nama_jurusan ?? '-';
         $message = "Halo Admin,\n\nSaya siswa yang ingin menanyakan sesuatu.\n\nData Saya:\nNama: {$nama}\nKelas: {$kelasLabel}\nJurusan: {$jurusanLabel}\n\nMasalah/Pertanyaan: [Silakan tuliskan pertanyaan atau masalah Anda]\n\nTerima kasih.";
         $waLink = 'https://wa.me/' . preg_replace('/[^0-9]/', '', $adminContactPhone) . '?text=' . urlencode($message);
     @endphp

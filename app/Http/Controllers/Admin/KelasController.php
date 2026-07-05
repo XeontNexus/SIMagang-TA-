@@ -19,9 +19,13 @@ class KelasController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_kelas' => 'required|string|max:50',
+            'nama_kelas' => 'required|string|max:2|min:1|regex:/^[a-zA-Z0-9]{1,2}$/',
             'tingkat' => 'required|string|max:20',
             'jurusan_id' => 'required|exists:jurusans,id'
+        ], [
+            'nama_kelas.max' => 'Nama Kelas maksimal 2 karakter.',
+            'nama_kelas.min' => 'Nama Kelas minimal 1 karakter.',
+            'nama_kelas.regex' => 'Nama Kelas hanya boleh berisi huruf atau angka (maks. 2 karakter).',
         ]);
 
         Kelas::create($request->all());
@@ -32,9 +36,13 @@ class KelasController extends Controller
     public function update(Request $request, Kelas $kela) // Laravel passes 'kela' by default due to singularization
     {
         $request->validate([
-            'nama_kelas' => 'required|string|max:50',
+            'nama_kelas' => 'required|string|max:2|min:1|regex:/^[a-zA-Z0-9]{1,2}$/',
             'tingkat' => 'required|string|max:20',
             'jurusan_id' => 'required|exists:jurusans,id'
+        ], [
+            'nama_kelas.max' => 'Nama Kelas maksimal 2 karakter.',
+            'nama_kelas.min' => 'Nama Kelas minimal 1 karakter.',
+            'nama_kelas.regex' => 'Nama Kelas hanya boleh berisi huruf atau angka (maks. 2 karakter).',
         ]);
 
         $kela->update($request->all());

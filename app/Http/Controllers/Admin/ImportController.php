@@ -185,7 +185,7 @@ class ImportController extends Controller
                 'no_hp' => $data['no_hp'],
                 'email' => User::internalEmailFromUsername($data['username']),
                 'role' => 'siswa',
-                'status' => 'menunggu',
+                'status' => 'belum_dinotifikasi',
             ]);
 
             $created++;
@@ -225,15 +225,15 @@ class ImportController extends Controller
      */
     public function resendAccountInfoAll()
     {
-        // Ambil siswa dengan status tertentu (misalnya yang baru di-import)
+        // Ambil siswa dengan status belum_dinotifikasi
         $students = User::where('role', 'siswa')
-            ->where('status', 'menunggu')
+            ->where('status', 'belum_dinotifikasi')
             ->whereNotNull('email')
             ->where('email', 'not like', '%@simagang.local')
             ->get();
 
         if ($students->isEmpty()) {
-            return back()->with('info', 'Tidak ada siswa dengan status menunggu yang memiliki email.');
+            return back()->with('info', 'Tidak ada siswa dengan status Belum Dinotifikasi yang memiliki email.');
         }
 
         $sent = 0;
@@ -243,6 +243,7 @@ class ImportController extends Controller
         foreach ($students as $student) {
             try {
                 Mail::to($student->email)->send(new StudentAccountInfo($student));
+                $student->update(['status' => 'menunggu']);
                 $sent++;
             } catch (\Exception $e) {
                 $failed++;
@@ -251,7 +252,7 @@ class ImportController extends Controller
             }
         }
 
-        $message = "Informasi akun berhasil dikirim ke $sent siswa via email.";
+        $message = "Informasi akun berhasil dikirim ke $sent siswa via email dan status diubah ke Menunggu.";
         if ($failed > 0) {
             $message .= " $failed gagal dikirim.";
         }

@@ -246,7 +246,34 @@
             keterangan.value = '';
             buktiFoto.value = '';
         }
+
+        // Update tampilan zona saat status berubah
+        updateZoneDisplayForStatus(status);
         updatePresensiButtons();
+    }
+
+    function updateZoneDisplayForStatus(status) {
+        if (currentZone !== 'merah') return; // Hanya perlu update jika di zona merah
+
+        const alertBox = document.getElementById('geofence-alert');
+        const statusText = document.getElementById('geofence-status-text');
+        const distanceText = document.getElementById('geofence-distance-text');
+
+        if (!alertBox) return;
+
+        if (status === 'izin' || status === 'sakit') {
+            alertBox.className = 'alert alert-info text-center mb-4';
+            statusText.innerHTML = '<i class="fas fa-info-circle me-1"></i> Zona Merah — tidak berlaku untuk Izin/Sakit';
+            if (currentDistance !== null) {
+                distanceText.innerText = `Jarak Anda: ${currentDistance} meter. Presensi Izin/Sakit tetap dapat dilakukan.`;
+            }
+        } else {
+            alertBox.className = 'alert alert-danger text-center mb-4';
+            statusText.innerHTML = '<i class="fas fa-times-circle me-1"></i> Zona Merah — presensi Hadir ditolak';
+            if (currentDistance !== null) {
+                distanceText.innerText = `Jarak Anda: ${currentDistance} meter. Terlalu jauh dari lokasi magang.`;
+            }
+        }
     }
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -275,6 +302,21 @@
             return;
         }
 
+        if (!status) {
+            btnMasuk.disabled = true;
+            btnKeluar.disabled = true;
+            return;
+        }
+
+        // Izin/Sakit: tidak perlu hasGmap atau GPS
+        if (status === 'izin' || status === 'sakit') {
+            // Pastikan keterangan dan foto sudah diisi (validasi HTML5 handle ini)
+            btnMasuk.disabled = false;
+            btnKeluar.disabled = true;
+            return;
+        }
+
+        // Hadir: perlu hasGmap
         if (!hasGmap) {
             btnMasuk.disabled = true;
             btnKeluar.disabled = true;
@@ -289,15 +331,14 @@
         const alertBox = document.getElementById('geofence-alert');
         const statusText = document.getElementById('geofence-status-text');
         const distanceText = document.getElementById('geofence-distance-text');
-        const btnMasuk = document.getElementById('btnMasuk');
-        const btnKeluar = document.getElementById('btnKeluar');
 
         if (!hasGmap || !targetLat || !targetLng) {
             alertBox.style.display = 'block';
             alertBox.className = 'alert alert-warning text-center mb-4';
-            statusText.innerText = 'Link Google Maps belum diisi.';
-            distanceText.innerHTML = 'Isi <strong>link lokasi magang</strong> terlebih dahulu sebelum presensi.';
-            btnMasuk.disabled = true;
+            statusText.innerText = 'Link Google Maps belum diisi (wajib untuk presensi Hadir).';
+            distanceText.innerHTML = 'Untuk status <strong>Izin/Sakit</strong>, Anda tetap bisa presensi tanpa GPS.';
+            // Jangan paksa disable — biarkan updatePresensiButtons() yang tentukan
+            updatePresensiButtons();
             return;
         }
 
@@ -314,51 +355,77 @@
                 document.getElementById('longitude_keluar').value = currentLng;
 
                 currentDistance = Math.round(calculateDistance(currentLat, currentLng, targetLat, targetLng));
-                distanceText.innerText = `Jarak Anda: ${currentDistance} meter`;
+
+                const selectedStatus = document.getElementById('status').value;
 
                 if (currentDistance <= radiusHijau) {
                     currentZone = 'hijau';
                     alertBox.className = 'alert alert-success text-center mb-4';
                     statusText.innerHTML = '<i class="fas fa-check-circle me-1"></i> Zona Hijau — presensi langsung diizinkan';
+                    distanceText.innerText = `Jarak Anda: ${currentDistance} meter`;
                 } else if (currentDistance <= radiusKuning) {
                     currentZone = 'kuning';
                     alertBox.className = 'alert alert-warning text-center mb-4';
                     statusText.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Zona Kuning — peringatan: lebih dekat lebih baik';
-                    distanceText.innerText += '. Konfirmasi diperlukan saat absen masuk.';
+                    distanceText.innerText = `Jarak Anda: ${currentDistance} meter. Konfirmasi diperlukan saat absen Hadir.`;
                 } else {
                     currentZone = 'merah';
                     alertBox.className = 'alert alert-danger text-center mb-4';
-                    statusText.innerHTML = '<i class="fas fa-times-circle me-1"></i> Zona Merah — presensi ditolak';
-                    distanceText.innerText += '. Terlalu jauh dari lokasi magang.';
+                    if (selectedStatus === 'izin' || selectedStatus === 'sakit') {
+                        statusText.innerHTML = '<i class="fas fa-info-circle me-1"></i> Zona Merah — tidak berlaku untuk Izin/Sakit';
+                        distanceText.innerText = `Jarak Anda: ${currentDistance} meter. Presensi Izin/Sakit tetap dapat dilakukan.`;
+                        alertBox.className = 'alert alert-info text-center mb-4';
+                    } else {
+                        statusText.innerHTML = '<i class="fas fa-times-circle me-1"></i> Zona Merah — presensi Hadir ditolak';
+                        distanceText.innerText = `Jarak Anda: ${currentDistance} meter. Terlalu jauh dari lokasi magang.`;
+                    }
                 }
 
                 updatePresensiButtons();
             }, function() {
                 currentZone = 'none';
-                alertBox.className = 'alert alert-danger text-center mb-4';
+                alertBox.className = 'alert alert-warning text-center mb-4';
                 statusText.innerText = 'GPS Belum Siap';
-                distanceText.innerHTML = 'Tunggu hingga lokasi GPS terdeteksi, atau pastikan izin lokasi diaktifkan.';
-                
+                distanceText.innerHTML = 'GPS tidak terdeteksi. <strong>Izin/Sakit</strong> tetap bisa disubmit tanpa GPS.';
+
                 // Show GPS enable button
                 const gpsButtonContainer = document.getElementById('gpsButtonContainer');
                 if (gpsButtonContainer) {
                     gpsButtonContainer.style.display = 'block';
                 }
-                
-                btnMasuk.disabled = true;
+
+                // Jangan paksa disable — izin/sakit tetap bisa submit
+                updatePresensiButtons();
             }, {
                 enableHighAccuracy: true,
                 maximumAge: 0
             });
         } else {
             alertBox.style.display = 'block';
-            alertBox.className = 'alert alert-danger text-center mb-4';
-            statusText.innerText = 'Browser tidak mendukung geolokasi.';
-            btnMasuk.disabled = true;
+            alertBox.className = 'alert alert-warning text-center mb-4';
+            statusText.innerText = 'Browser tidak mendukung geolokasi (GPS tidak tersedia).';
+            distanceText.innerHTML = 'Status <strong>Izin/Sakit</strong> tetap bisa disubmit tanpa GPS.';
+            // Jangan paksa disable — izin/sakit tetap bisa submit
+            updatePresensiButtons();
         }
     }
 
     function handlePresensiSubmit(e) {
+        const status = document.getElementById('status').value;
+
+        if (!status) {
+            e.preventDefault();
+            Swal.fire({ icon: 'warning', title: 'Pilih Status', text: 'Silakan pilih status presensi terlebih dahulu.' });
+            return false;
+        }
+
+        // Izin/Sakit: tidak perlu cek GPS atau hasGmap
+        if (status === 'izin' || status === 'sakit') {
+            // Biarkan form submit normal (validasi HTML5 akan cek keterangan & foto)
+            return true;
+        }
+
+        // Status hadir: perlu hasGmap
         if (!hasGmap) {
             e.preventDefault();
             Swal.fire({
@@ -371,13 +438,6 @@
                     new bootstrap.Modal(document.getElementById('gmapModal')).show();
                 }
             });
-            return false;
-        }
-
-        const status = document.getElementById('status').value;
-        if (!status) {
-            e.preventDefault();
-            Swal.fire({ icon: 'warning', title: 'Pilih Status', text: 'Silakan pilih status presensi terlebih dahulu.' });
             return false;
         }
 

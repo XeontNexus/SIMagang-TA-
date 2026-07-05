@@ -13,16 +13,14 @@ class LogbookController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Logbook::with('user');
+        $query = Logbook::with(['user.kelas', 'user.jurusan']);
 
-        // Exclude approved logbooks from approval list
-        $query->where('logbooks.status', '!=', 'approved');
-
+        // Filter status: jika tidak ada filter, tampilkan semua
         if ($request->filled('status')) {
             $query->where('logbooks.status', $request->status);
         }
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('user', function($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%");
@@ -37,8 +35,8 @@ class LogbookController extends Controller
             ->paginate(20);
 
         // Get approved logbooks for data tab
-        $approvedQuery = Logbook::with('user')->where('logbooks.status', 'approved');
-        if ($request->has('search') && strpos($request->input('search'), '') === 0) {
+        $approvedQuery = Logbook::with(['user.kelas', 'user.jurusan'])->where('logbooks.status', 'approved');
+        if ($request->filled('search')) {
             $search = $request->search;
             $approvedQuery->whereHas('user', function($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%");

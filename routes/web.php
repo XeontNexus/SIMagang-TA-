@@ -78,6 +78,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // Student Management
     Route::get('/students-list', [StudentController::class, 'list'])->name('students.list');
+    Route::post('/students/bulk-delete', [StudentController::class, 'bulkDestroy'])->name('students.bulk-delete');
+    Route::post('/students/{student}/mark-as-notified', [StudentController::class, 'markAsNotified'])->name('students.mark-as-notified');
     Route::resource('students', StudentController::class);
 
     // Pending Approvals
@@ -160,8 +162,6 @@ Route::middleware(['auth', 'role:siswa'])->prefix('student')->name('student.')->
     Route::post('/presensi', [StudentPresensiController::class, 'store'])->name('presensi.store');
     Route::post('/presensi/checkout', [StudentPresensiController::class, 'checkout'])->name('presensi.checkout');
     Route::post('/presensi/update-gmap', [StudentPresensiController::class, 'updateGmapLink'])->name('presensi.update-gmap');
-    Route::post('/notifications/{notification}/read', [\App\Http\Controllers\Student\NotificationController::class, 'markRead'])->name('notifications.read');
-    Route::post('/notifications/read-all', [\App\Http\Controllers\Student\NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     
     // Logbook
     Route::resource('logbooks', StudentLogbookController::class);
