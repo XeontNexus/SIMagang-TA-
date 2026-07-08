@@ -53,11 +53,17 @@
                 </div>
 
                 <div class="col-md-6 mb-3">
-                    <label for="no_hp" class="form-label">Nomor WhatsApp (WA) <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="no_hp" name="no_hp"
-                           value="{{ old('no_hp') }}" placeholder="08xxxxxxxxxx" required
-                           inputmode="numeric" maxlength="13" autocomplete="off">
-                    <small class="text-muted">Hanya angka, dimulai dari <strong>08</strong>, minimal <strong>10</strong> dan maksimal <strong>13 digit</strong></small>
+                    <label for="no_hp_display" class="form-label">Nomor WhatsApp (WA) <span class="text-danger">*</span></label>
+                    {{-- Hidden input yang akan dikirim ke server (format 62xxx) --}}
+                    <input type="hidden" id="no_hp" name="no_hp" value="{{ old('no_hp') }}">
+                    <div class="input-group">
+                        <span class="input-group-text bg-success text-white fw-bold">+62</span>
+                        <input type="text" class="form-control" id="no_hp_display"
+                               placeholder="8xxxxxxxxxx" required
+                               inputmode="numeric" maxlength="13" autocomplete="off"
+                               value="{{ old('no_hp') ? ltrim(preg_replace('/^62/', '', old('no_hp')), '0') : '' }}">
+                    </div>
+                    <small class="text-muted">Isi angka setelah <strong>+62</strong> (tanpa angka 0 di depan), contoh: <strong>8123456789</strong></small>
                 </div>
 
                 <div class="col-md-6 mb-3">
@@ -105,13 +111,12 @@
     // Validasi Nama Lengkap: hanya huruf, spasi, dan apostrof (')
     const namaInput = document.getElementById('nama_lengkap');
     namaInput.addEventListener('input', function () {
-        // Hapus karakter selain huruf, spasi, apostrof
-        this.value = this.value.replace(/[^A-Za-z ']/g, '');
+        this.value = this.value.replace(/[^A-Za-zÀ-ÿ '.,]/g, '');
         this.setCustomValidity('');
     });
     namaInput.addEventListener('blur', function () {
         const val = this.value.trim();
-        if (val && !/^[A-Za-z ']+$/.test(val)) {
+        if (val && !/^[A-Za-zÀ-ÿ '.,]+$/.test(val)) {
             this.setCustomValidity("Nama hanya boleh berisi huruf, spasi, dan tanda apostrof (').");
             this.reportValidity();
         } else {
@@ -119,68 +124,70 @@
         }
     });
 
-    // Validasi No HP: hanya angka, dimulai 08, min 10 max 13 digit
-    const noHpInput = document.getElementById('no_hp');
-    noHpInput.addEventListener('input', function () {
+    // Input +62 prefix - No WA
+    const noHpHidden = document.getElementById('no_hp');      // hidden, dikirim ke server (62xxx)
+    const noHpDisplay = document.getElementById('no_hp_display'); // visible, diisi user
+
+    // Hanya izinkan angka, dan strip leading 0 jika user ketik 0 di depan
+    noHpDisplay.addEventListener('input', function () {
+        // Hanya angka
         this.value = this.value.replace(/[^0-9]/g, '');
+        // Jika user ketik 0 di depan (sisa format lama), strip
+        if (this.value.startsWith('0')) {
+            this.value = this.value.replace(/^0+/, '');
+        }
+        // Maks 13 digit (setelah 62 = total 15)
         if (this.value.length > 13) {
             this.value = this.value.slice(0, 13);
         }
         this.setCustomValidity('');
+        // Update hidden
+        noHpHidden.value = this.value ? '62' + this.value : '';
     });
-    noHpInput.addEventListener('blur', function () {
+
+    noHpDisplay.addEventListener('blur', function () {
         const val = this.value;
         if (!val) return;
-        if (!val.startsWith('08')) {
-            this.setCustomValidity('Nomor WA harus dimulai dengan 08.');
-            this.reportValidity();
-        } else if (val.length < 10) {
-            this.setCustomValidity('Nomor WA minimal 10 digit.');
-            this.reportValidity();
-        } else if (val.length > 13) {
-            this.setCustomValidity('Nomor WA maksimal 13 digit.');
+        if (val.length < 8) {
+            this.setCustomValidity('Nomor WA terlalu pendek (min 8 digit setelah +62).');
             this.reportValidity();
         } else {
             this.setCustomValidity('');
         }
+        noHpHidden.value = val ? '62' + val : '';
     });
+
+    // Pastikan hidden value terisi saat load (jika ada old value)
+    if (noHpDisplay.value) {
+        noHpHidden.value = '62' + noHpDisplay.value;
+    }
 
     // Validasi saat form submit
     document.querySelector('form').addEventListener('submit', function (e) {
         const nama = namaInput.value.trim();
-        const noHp = noHpInput.value;
+        const noHpVal = noHpDisplay.value.trim();
         let valid = true;
 
         if (!nama) {
             namaInput.setCustomValidity('Nama lengkap wajib diisi.');
             namaInput.reportValidity();
             valid = false;
-        } else if (!/^[A-Za-z ']+$/.test(nama)) {
-            namaInput.setCustomValidity("Nama hanya boleh berisi huruf, spasi, dan tanda apostrof (').");
-            namaInput.reportValidity();
-            valid = false;
         } else {
             namaInput.setCustomValidity('');
         }
 
-        if (!noHp) {
-            noHpInput.setCustomValidity('Nomor WA wajib diisi.');
-            noHpInput.reportValidity();
+        if (!noHpVal) {
+            noHpDisplay.setCustomValidity('Nomor WA wajib diisi.');
+            noHpDisplay.reportValidity();
             valid = false;
-        } else if (!noHp.startsWith('08')) {
-            noHpInput.setCustomValidity('Nomor WA harus dimulai dengan 08.');
-            noHpInput.reportValidity();
-            valid = false;
-        } else if (noHp.length < 10) {
-            noHpInput.setCustomValidity('Nomor WA minimal 10 digit.');
-            noHpInput.reportValidity();
-            valid = false;
-        } else if (noHp.length > 13) {
-            noHpInput.setCustomValidity('Nomor WA maksimal 13 digit.');
-            noHpInput.reportValidity();
+        } else if (noHpVal.length < 8) {
+            noHpDisplay.setCustomValidity('Nomor WA terlalu pendek.');
+            noHpDisplay.reportValidity();
             valid = false;
         } else {
-            noHpInput.setCustomValidity('');
+            noHpDisplay.setCustomValidity('');
+            // Pastikan hidden sudah terisi
+            noHpHidden.value = '62' + noHpVal;
         }
 
         if (!valid) e.preventDefault();

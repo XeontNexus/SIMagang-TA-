@@ -111,4 +111,38 @@ class PresensiController extends Controller
 
         return view('admin.presensi.detail', compact('student', 'presensis', 'bulan'));
     }
+
+    /**
+     * Admin mengubah status presensi (misal alfa → hadir)
+     */
+    public function updateStatus(Request $request, Presensi $presensi)
+    {
+        $request->validate([
+            'status'     => 'required|in:hadir,izin,sakit,alfa',
+            'keterangan' => 'nullable|string|max:255',
+            'jam_masuk'  => 'nullable|date_format:H:i',
+            'jam_keluar' => 'nullable|date_format:H:i',
+        ]);
+
+        $data = [
+            'status'     => $request->status,
+            'keterangan' => $request->keterangan,
+        ];
+
+        // Jika diubah ke hadir dan ada jam masuk yang diisi, simpan
+        if ($request->status === 'hadir') {
+            if ($request->filled('jam_masuk')) {
+                $data['jam_masuk'] = $request->jam_masuk . ':00';
+            }
+            if ($request->filled('jam_keluar')) {
+                $data['jam_keluar'] = $request->jam_keluar . ':00';
+            }
+        }
+
+        $presensi->update($data);
+
+        return redirect()->back()->with('success',
+            "✅ Status presensi {$presensi->user->nama_lengkap} ({$presensi->tanggal->translatedFormat('d F Y')}) berhasil diubah menjadi \"" . ucfirst($request->status) . "\"."
+        );
+    }
 }

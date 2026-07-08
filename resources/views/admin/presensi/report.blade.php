@@ -52,14 +52,15 @@
                     <tr>
                         <th width="4%" class="text-center align-middle">No</th>
                         <th width="10%" class="text-center align-middle">Tanggal</th>
-                        <th width="18%" class="text-start align-middle">Nama Siswa</th>
-                        <th width="14%" class="text-start align-middle">Tempat Mitra</th>
-                        <th width="8%" class="text-center align-middle">Jam Masuk</th>
-                        <th width="8%" class="text-center align-middle">Jam Keluar</th>
-                        <th width="14%" class="text-start align-middle">Koordinat Presensi</th>
-                        <th width="9%" class="text-center align-middle">Kecocokan</th>
-                        <th width="12%" class="text-start align-middle">Status / Keterangan</th>
-                        <th width="8%" class="text-center align-middle">Bukti</th>
+                        <th width="17%" class="text-start align-middle">Nama Siswa</th>
+                        <th width="13%" class="text-start align-middle">Tempat Mitra</th>
+                        <th width="7%" class="text-center align-middle">Jam Masuk</th>
+                        <th width="7%" class="text-center align-middle">Jam Keluar</th>
+                        <th width="13%" class="text-start align-middle">Koordinat Presensi</th>
+                        <th width="8%" class="text-center align-middle">Kecocokan</th>
+                        <th width="11%" class="text-start align-middle">Status / Keterangan</th>
+                        <th width="7%" class="text-center align-middle">Bukti</th>
+                        <th width="6%" class="text-center align-middle">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -124,7 +125,7 @@
                                     <div class="small text-secondary fw-semibold">{{ $presensi->keterangan }}</div>
                                 @endif
                             </td>
-                            <td class="text-center align-middle">
+                        <td class="text-center align-middle">
                                 @if($presensi->hasBuktiFoto())
                                     <button type="button" class="btn btn-sm btn-outline-primary"
                                             data-bs-toggle="modal"
@@ -142,14 +143,92 @@
                                     <span class="text-muted small">-</span>
                                 @endif
                             </td>
+                            {{-- Kolom Aksi Edit Status --}}
+                            <td class="text-center align-middle">
+                                <button type="button" class="btn btn-sm btn-outline-warning"
+                                        title="Edit Status Presensi"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editStatusModal"
+                                        data-presensi-id="{{ $presensi->id }}"
+                                        data-nama="{{ $presensi->user->nama_lengkap }}"
+                                        data-tanggal="{{ $presensi->tanggal->translatedFormat('d F Y') }}"
+                                        data-status="{{ $presensi->status }}"
+                                        data-keterangan="{{ $presensi->keterangan ?? '' }}"
+                                        data-jam-masuk="{{ $presensi->jam_masuk ? \Carbon\Carbon::parse($presensi->jam_masuk)->format('H:i') : '' }}"
+                                        data-jam-keluar="{{ $presensi->jam_keluar ? \Carbon\Carbon::parse($presensi->jam_keluar)->format('H:i') : '' }}"
+                                        data-update-url="{{ route('admin.presensi.update-status', $presensi) }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center text-muted py-4">Belum ada data presensi dalam 7 hari terakhir.</td>
+                            <td colspan="11" class="text-center text-muted py-4">Belum ada data presensi dalam 7 hari terakhir.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+{{-- Modal Edit Status Presensi --}}
+<div class="modal fade" id="editStatusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title text-dark"><i class="fas fa-edit me-2"></i>Edit Status Presensi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editStatusForm" method="POST" action="">
+                @csrf
+                @method('PATCH')
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <div class="fw-bold text-primary" id="editNamaSiswa"></div>
+                        <small class="text-muted" id="editTanggal"></small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+                        <select name="status" id="editStatus" class="form-select" required>
+                            <option value="hadir">✅ Hadir</option>
+                            <option value="izin">📋 Izin</option>
+                            <option value="sakit">🤒 Sakit</option>
+                            <option value="alfa">❌ Alfa</option>
+                        </select>
+                    </div>
+                    <div id="jamGroup" class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Jam Masuk</label>
+                            <input type="time" name="jam_masuk" id="editJamMasuk" class="form-control">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Jam Keluar</label>
+                            <input type="time" name="jam_keluar" id="editJamKeluar" class="form-control">
+                        </div>
+                        <div class="col-12">
+                            <small class="text-muted">Opsional — isi jika perlu menyesuaikan jam presensi</small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Keterangan <span class="text-muted">(opsional)</span></label>
+                        <input type="text" name="keterangan" id="editKeterangan" class="form-control"
+                               placeholder="Contoh: Lupa presensi, dikoreksi admin">
+                    </div>
+                    <div class="alert alert-warning py-2 small mb-0">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Perubahan status ini dicatat sebagai koreksi admin. Pastikan sudah dikonfirmasi dengan siswa yang bersangkutan.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Batal
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save me-1"></i>Simpan Perubahan
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -207,6 +286,44 @@ document.getElementById('buktiModal')?.addEventListener('show.bs.modal', functio
     document.getElementById('buktiFotoPreview').src = button.getAttribute('data-foto') || '';
     document.getElementById('buktiDownloadBtn').href = button.getAttribute('data-download') || '#';
     document.getElementById('buktiFullPageBtn').href = button.getAttribute('data-detail') || '#';
+});
+
+// Modal Edit Status Presensi
+document.getElementById('editStatusModal')?.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const form = document.getElementById('editStatusForm');
+
+    // Set nama & tanggal info
+    document.getElementById('editNamaSiswa').textContent = button.getAttribute('data-nama') || '-';
+    document.getElementById('editTanggal').textContent = 'Tanggal: ' + (button.getAttribute('data-tanggal') || '-');
+
+    // Set nilai form
+    const statusSelect = document.getElementById('editStatus');
+    const currentStatus = button.getAttribute('data-status') || 'alfa';
+    statusSelect.value = currentStatus;
+
+    document.getElementById('editKeterangan').value = button.getAttribute('data-keterangan') || '';
+    document.getElementById('editJamMasuk').value  = button.getAttribute('data-jam-masuk') || '';
+    document.getElementById('editJamKeluar').value = button.getAttribute('data-jam-keluar') || '';
+
+    // Set action URL form
+    form.action = button.getAttribute('data-update-url');
+
+    // Toggle jam group visibility
+    toggleJamGroup(currentStatus);
+});
+
+function toggleJamGroup(status) {
+    const jamGroup = document.getElementById('jamGroup');
+    if (status === 'hadir') {
+        jamGroup.style.display = '';
+    } else {
+        jamGroup.style.display = 'none';
+    }
+}
+
+document.getElementById('editStatus')?.addEventListener('change', function () {
+    toggleJamGroup(this.value);
 });
 </script>
 @endpush

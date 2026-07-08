@@ -125,6 +125,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/presensi/records/{presensi}/bukti', [AdminPresensiController::class, 'showBukti'])->name('presensi.bukti');
     Route::get('/presensi/records/{presensi}/bukti/download', [AdminPresensiController::class, 'downloadBukti'])->name('presensi.bukti.download');
     Route::get('/presensi/{student}/detail', [AdminPresensiController::class, 'detail'])->name('presensi.detail');
+    Route::patch('/presensi/{presensi}/update-status', [AdminPresensiController::class, 'updateStatus'])->name('presensi.update-status');
     
     // Logbook Management
     Route::get('/logbooks', [AdminLogbookController::class, 'index'])->name('logbooks.index');
