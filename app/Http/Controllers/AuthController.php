@@ -260,9 +260,32 @@ class AuthController extends Controller
     /**
      * Handle profile update
      */
+    /**
+     * Normalize Indonesian phone number: convert leading 0 to 62, strip non-digits.
+     */
+    private function normalizePhone(?string $phone): ?string
+    {
+        if (empty($phone)) {
+            return null;
+        }
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        if (str_starts_with($phone, '0')) {
+            $phone = '62' . substr($phone, 1);
+        }
+        return $phone ?: null;
+    }
+
     public function updateProfile(Request $request)
     {
         $user = Auth::user();
+
+        // Normalize phone numbers before validation
+        $phoneFields = ['no_hp', 'no_hp_pembimbing_lapangan', 'no_hp_guru_pembimbing'];
+        foreach ($phoneFields as $field) {
+            if ($request->has($field)) {
+                $request->merge([$field => $this->normalizePhone($request->input($field))]);
+            }
+        }
 
         $rules = [
             'nama_lengkap' => ['required', 'string', 'max:100', 'regex:/^[\p{L}\s\'.,]+$/u'],

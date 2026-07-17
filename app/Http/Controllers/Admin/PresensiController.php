@@ -38,38 +38,115 @@ class PresensiController extends Controller
         return view('admin.presensi.index', compact('presensis'));
     }
 
+    /**
+     * Laporan presensi: tampilkan SEMUA siswa aktif untuk tanggal terpilih,
+     * termasuk yang belum presensi (status virtual 'belum_presensi').
+     * Default tanggal = hari ini. Bisa filter ke 7 hari ke belakang.
+     */
     public function report(Request $request)
     {
         PresensiRetentionService::cleanupExpired();
 
         $startDate = PresensiRetentionService::earliestVisibleDate();
-        $endDate = Carbon::today();
+        $endDate   = Carbon::today();
 
-        $query = Presensi::whereBetween('tanggal', [$startDate, $endDate])
-            ->with(['user.kelas', 'user.jurusan', 'user.mitra']);
+        // Default tanggal = hari ini
+        $selectedDate = $request->filled('tanggal')
+            ? Carbon::parse($request->tanggal)
+            : Carbon::today();
+
+        // Pastikan tanggal dalam rentang yang diizinkan
+        if ($selectedDate->lt($startDate)) {
+            $selectedDate = $startDate;
+        }
+        if ($selectedDate->gt($endDate)) {
+            $selectedDate = $endDate;
+        }
+
+        // Ambil semua siswa aktif (kecuali rejected & pending)
+        $siswaQuery = User::where('role', 'siswa')
+            ->whereNotIn('status', ['rejected', 'pending'])
+            ->with(['kelas', 'jurusan', 'mitra']);
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->whereHas('user', function ($q) use ($search) {
+            $siswaQuery->where(function ($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%")
                   ->orWhere('username', 'like', "%{$search}%")
                   ->orWhere('institusi', 'like', "%{$search}%");
             });
         }
 
-        if ($request->filled('tanggal')) {
-            $query->whereDate('tanggal', $request->tanggal);
+        $semuaSiswa = $siswaQuery->orderBy('nama_lengkap')->get();
+
+        // Ambil data presensi di tanggal terpilih
+        $presensiByUserId = Presensi::whereDate('tanggal', $selectedDate)
+            ->with(['user.kelas', 'user.jurusan', 'user.mitra'])
+            ->get()
+            ->keyBy('user_id');
+
+        // Gabungkan: siswa yang ada presensi → data presensi, yang tidak → status 'belum_presensi'
+        $presensiReport = $semuaSiswa->map(function ($siswa) use ($presensiByUserId, $selectedDate) {
+            if ($presensiByUserId->has($siswa->id)) {
+                $presensi = $presensiByUserId->get($siswa->id);
+                $presensi->setRelation('user', $siswa); // Ensure loaded
+                return [
+                    'type'    => 'presensi',
+                    'presensi'=> $presensi,
+                    'user'    => $siswa,
+                ];
+            } else {
+                return [
+                    'type'    => 'belum_presensi',
+                    'presensi'=> null,
+                    'user'    => $siswa,
+                    'tanggal' => $selectedDate,
+                ];
+            }
+        });
+
+        return view('admin.presensi.report', compact(
+            'presensiReport', 'startDate', 'endDate', 'selectedDate'
+        ));
+    }
+
+    /**
+     * Admin menambahkan presensi baru untuk siswa yang belum presensi.
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'user_id'    => 'required|exists:users,id',
+            'tanggal'    => 'required|date',
+            'status'     => 'required|in:hadir,izin,sakit,alfa',
+            'keterangan' => 'nullable|string|max:255',
+            'jam_masuk'  => 'nullable|date_format:H:i',
+            'jam_keluar' => 'nullable|date_format:H:i',
+        ]);
+
+        // Cek apakah sudah ada presensi di tanggal itu
+        $existing = Presensi::where('user_id', $request->user_id)
+            ->whereDate('tanggal', $request->tanggal)
+            ->first();
+
+        if ($existing) {
+            return redirect()->back()->with('error', 'Siswa ini sudah memiliki catatan presensi pada tanggal tersebut.');
         }
 
-        $presensiReport = $query
-            ->get()
-            ->sortBy([
-                fn ($presensi) => $presensi->tanggal->format('Y-m-d'),
-                fn ($presensi) => $presensi->user?->nama_lengkap ?? '',
-            ])
-            ->values();
+        $student = User::findOrFail($request->user_id);
 
-        return view('admin.presensi.report', compact('presensiReport', 'startDate', 'endDate'));
+        Presensi::create([
+            'user_id'    => $request->user_id,
+            'tanggal'    => $request->tanggal,
+            'status'     => $request->status,
+            'keterangan' => $request->keterangan,
+            'jam_masuk'  => $request->filled('jam_masuk') ? $request->jam_masuk . ':00' : null,
+            'jam_keluar' => $request->filled('jam_keluar') ? $request->jam_keluar . ':00' : null,
+        ]);
+
+        return redirect()->back()->with('success',
+            "✅ Presensi {$student->nama_lengkap} ({$request->tanggal}) berhasil ditambahkan dengan status \"" . ucfirst($request->status) . "\"."
+        );
     }
 
     public function showBukti(Presensi $presensi)

@@ -122,6 +122,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Presensi Management
     Route::get('/presensi', [AdminPresensiController::class, 'index'])->name('presensi.index');
     Route::get('/presensi/report', [AdminPresensiController::class, 'report'])->name('presensi.report');
+    Route::post('/presensi/store', [AdminPresensiController::class, 'store'])->name('presensi.store');
     Route::get('/presensi/records/{presensi}/bukti', [AdminPresensiController::class, 'showBukti'])->name('presensi.bukti');
     Route::get('/presensi/records/{presensi}/bukti/download', [AdminPresensiController::class, 'downloadBukti'])->name('presensi.bukti.download');
     Route::get('/presensi/{student}/detail', [AdminPresensiController::class, 'detail'])->name('presensi.detail');

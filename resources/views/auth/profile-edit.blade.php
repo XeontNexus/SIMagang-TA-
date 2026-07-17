@@ -63,8 +63,9 @@
                                    inputmode="numeric"
                                    pattern="[0-9]*"
                                    maxlength="16"
-                                   @if(auth()->user()->isAdmin()) placeholder="62xxxxxxxxxxxx" @endif
-                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 16)">
+                                   placeholder="Contoh: 08123456789"
+                                   oninput="normalizePhoneInput(this, 16)">
+                            <small class="text-muted">Ketik 08xxx atau 628xxx — otomatis diformat</small>
                             @error('no_hp')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -173,8 +174,9 @@
                                inputmode="numeric"
                                pattern="[0-9]*"
                                maxlength="15"
-                               placeholder="62xxxxxxxxxxx"
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 15)">
+                               placeholder="Contoh: 08123456789"
+                               oninput="normalizePhoneInput(this, 15)">
+                        <small class="text-muted">Ketik 08xxx atau 628xxx — otomatis diformat</small>
                         @error('no_hp_pembimbing_lapangan')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -205,8 +207,9 @@
                                inputmode="numeric"
                                pattern="[0-9]*"
                                maxlength="15"
-                               placeholder="62xxxxxxxxxxx"
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 15)">
+                               placeholder="Contoh: 08123456789"
+                               oninput="normalizePhoneInput(this, 15)">
+                        <small class="text-muted">Otomatis diisi saat memilih guru pembimbing</small>
                         @error('no_hp_guru_pembimbing')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -230,6 +233,20 @@
 
 @push('scripts')
 <script>
+    /**
+     * Normalize Indonesian phone number input:
+     * - Strip non-digits
+     * - Convert leading 0 → 62
+     * - Enforce maxLength
+     */
+    function normalizePhoneInput(el, maxLen) {
+        let val = el.value.replace(/[^0-9]/g, '');
+        if (val.startsWith('0')) {
+            val = '62' + val.substring(1);
+        }
+        el.value = val.slice(0, maxLen);
+    }
+
     // Auto-fill guru pembimbing no_hp ketika guru dipilih
     const guruSelect = document.getElementById('guru_pembimbing_id');
     const noHpInput = document.getElementById('no_hp_guru_pembimbing');
@@ -244,7 +261,7 @@
             try {
                 const response = await fetch(`/api/guru-pembimbing/${this.value}/details`);
                 const data = await response.json();
-                
+
                 if (response.ok && data.no_hp) {
                     noHpInput.value = data.no_hp;
                 } else {
