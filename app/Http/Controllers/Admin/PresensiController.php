@@ -56,12 +56,14 @@ class PresensiController extends Controller
             : Carbon::today();
 
         // Pastikan tanggal dalam rentang yang diizinkan
-        if ($selectedDate->lt($startDate)) {
-            $selectedDate = $startDate;
-        }
-        if ($selectedDate->gt($endDate)) {
-            $selectedDate = $endDate;
-        }
+        if ($selectedDate->lt($startDate)) $selectedDate = $startDate;
+        if ($selectedDate->gt($endDate))   $selectedDate = $endDate;
+
+        // Filter tambahan
+        $filterStatus  = $request->input('filter_status');   // belum_presensi|hadir|izin|sakit|alfa
+        $filterKelas   = $request->input('filter_kelas');    // kelas_id
+        $filterJurusan = $request->input('filter_jurusan');  // jurusan_id
+        $sortBy        = $request->input('sort_by', 'nama'); // nama|kelas|jurusan|status
 
         // Ambil semua siswa aktif (kecuali rejected & pending)
         $siswaQuery = User::where('role', 'siswa')
@@ -77,6 +79,16 @@ class PresensiController extends Controller
             });
         }
 
+        // Filter kelas
+        if ($filterKelas) {
+            $siswaQuery->where('kelas_id', $filterKelas);
+        }
+
+        // Filter jurusan
+        if ($filterJurusan) {
+            $siswaQuery->where('jurusan_id', $filterJurusan);
+        }
+
         $semuaSiswa = $siswaQuery->orderBy('nama_lengkap')->get();
 
         // Ambil data presensi di tanggal terpilih
@@ -89,26 +101,60 @@ class PresensiController extends Controller
         $presensiReport = $semuaSiswa->map(function ($siswa) use ($presensiByUserId, $selectedDate) {
             if ($presensiByUserId->has($siswa->id)) {
                 $presensi = $presensiByUserId->get($siswa->id);
-                $presensi->setRelation('user', $siswa); // Ensure loaded
+                $presensi->setRelation('user', $siswa);
                 return [
-                    'type'    => 'presensi',
-                    'presensi'=> $presensi,
-                    'user'    => $siswa,
+                    'type'          => 'presensi',
+                    'presensi'      => $presensi,
+                    'user'          => $siswa,
+                    'status_sort'   => $presensi->status,
+                    'kelas_sort'    => ($siswa->kelas?->tingkat ?? '') . '-' . ($siswa->kelas?->nama_kelas ?? ''),
+                    'jurusan_sort'  => $siswa->jurusan?->nama_jurusan ?? '',
                 ];
             } else {
                 return [
-                    'type'    => 'belum_presensi',
-                    'presensi'=> null,
-                    'user'    => $siswa,
-                    'tanggal' => $selectedDate,
+                    'type'          => 'belum_presensi',
+                    'presensi'      => null,
+                    'user'          => $siswa,
+                    'tanggal'       => $selectedDate,
+                    'status_sort'   => 'belum_presensi',
+                    'kelas_sort'    => ($siswa->kelas?->tingkat ?? '') . '-' . ($siswa->kelas?->nama_kelas ?? ''),
+                    'jurusan_sort'  => $siswa->jurusan?->nama_jurusan ?? '',
                 ];
             }
         });
 
+        // Filter by status (setelah penggabungan karena 'belum_presensi' virtual)
+        if ($filterStatus) {
+            $presensiReport = $presensiReport->filter(function ($row) use ($filterStatus) {
+                if ($filterStatus === 'izin_sakit') {
+                    return in_array($row['status_sort'], ['izin', 'sakit']);
+                }
+                return $row['status_sort'] === $filterStatus;
+            });
+        }
+
+        // Sorting
+        $statusOrder = ['belum_presensi' => 0, 'hadir' => 1, 'izin' => 2, 'sakit' => 3, 'alfa' => 4];
+        $presensiReport = match($sortBy) {
+            'status'  => $presensiReport->sortBy(fn($r) => $statusOrder[$r['status_sort']] ?? 99),
+            'kelas'   => $presensiReport->sortBy(fn($r) => $r['kelas_sort']),
+            'jurusan' => $presensiReport->sortBy(fn($r) => $r['jurusan_sort']),
+            default   => $presensiReport->sortBy(fn($r) => $r['user']->nama_lengkap),
+        };
+
+        $presensiReport = $presensiReport->values();
+
+        // Data dropdown filter
+        $kelasList   = \App\Models\Kelas::orderByRaw("tingkat, nama_kelas")->get();
+        $jurusanList = \App\Models\Jurusan::orderBy('nama_jurusan')->get();
+
         return view('admin.presensi.report', compact(
-            'presensiReport', 'startDate', 'endDate', 'selectedDate'
+            'presensiReport', 'startDate', 'endDate', 'selectedDate',
+            'kelasList', 'jurusanList',
+            'filterStatus', 'filterKelas', 'filterJurusan', 'sortBy'
         ));
     }
+
 
     /**
      * Admin menambahkan presensi baru untuk siswa yang belum presensi.

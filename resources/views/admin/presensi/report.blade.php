@@ -11,34 +11,111 @@
     Data lebih lama dihapus otomatis oleh sistem.
 </div>
 
-{{-- Filter --}}
+{{-- Filter & Sorting --}}
 <div class="card shadow mb-4">
-    <div class="card-body">
-        <form method="GET" class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label small fw-bold">Cari Siswa</label>
-                <input type="text" name="search" class="form-control" placeholder="Nama / username / institusi..."
-                       value="{{ request('search') }}">
+    <div class="card-header py-2 bg-light">
+        <span class="fw-bold small text-secondary"><i class="fas fa-filter me-1"></i>Filter & Sorting</span>
+    </div>
+    <div class="card-body pb-2">
+        <form method="GET" class="row g-2" id="filterForm">
+            {{-- Baris 1 --}}
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Cari Siswa</label>
+                <input type="text" name="search" class="form-control form-control-sm"
+                       placeholder="Nama / username..." value="{{ request('search') }}">
             </div>
-            <div class="col-md-4">
-                <label class="form-label small fw-bold">Tanggal</label>
-                <input type="date" name="tanggal" class="form-control"
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Tanggal</label>
+                <input type="date" name="tanggal" class="form-control form-control-sm"
                        min="{{ $startDate->format('Y-m-d') }}"
                        max="{{ $endDate->format('Y-m-d') }}"
                        value="{{ $selectedDate->format('Y-m-d') }}">
-                <small class="text-muted">Default: hari ini. Bisa lihat maks 7 hari ke belakang.</small>
             </div>
-            <div class="col-md-4 d-flex align-items-end gap-2">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-search me-2"></i>Filter
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Status Presensi</label>
+                <select name="filter_status" class="form-select form-select-sm">
+                    <option value="">-- Semua Status --</option>
+                    <option value="belum_presensi" {{ $filterStatus === 'belum_presensi' ? 'selected' : '' }}>⏳ Belum Presensi</option>
+                    <option value="hadir"          {{ $filterStatus === 'hadir'          ? 'selected' : '' }}>✅ Hadir</option>
+                    <option value="izin_sakit"     {{ $filterStatus === 'izin_sakit'     ? 'selected' : '' }}>📋🤒 Izin atau Sakit</option>
+                    <option value="izin"           {{ $filterStatus === 'izin'           ? 'selected' : '' }}>📋 Izin</option>
+                    <option value="sakit"          {{ $filterStatus === 'sakit'          ? 'selected' : '' }}>🤒 Sakit</option>
+                    <option value="alfa"           {{ $filterStatus === 'alfa'           ? 'selected' : '' }}>❌ Alfa</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Kelas</label>
+                <select name="filter_kelas" class="form-select form-select-sm">
+                    <option value="">-- Semua Kelas --</option>
+                    @foreach($kelasList as $kls)
+                        <option value="{{ $kls->id }}" {{ $filterKelas == $kls->id ? 'selected' : '' }}>
+                            {{ $kls->tingkat }}-{{ $kls->nama_kelas }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Jurusan</label>
+                <select name="filter_jurusan" class="form-select form-select-sm">
+                    <option value="">-- Semua Jurusan --</option>
+                    @foreach($jurusanList as $jrs)
+                        <option value="{{ $jrs->id }}" {{ $filterJurusan == $jrs->id ? 'selected' : '' }}>
+                            {{ $jrs->nama_jurusan }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small fw-semibold mb-1">Urutkan</label>
+                <select name="sort_by" class="form-select form-select-sm">
+                    <option value="nama"    {{ $sortBy === 'nama'    ? 'selected' : '' }}>Nama</option>
+                    <option value="status"  {{ $sortBy === 'status'  ? 'selected' : '' }}>Status</option>
+                    <option value="kelas"   {{ $sortBy === 'kelas'   ? 'selected' : '' }}>Kelas</option>
+                    <option value="jurusan" {{ $sortBy === 'jurusan' ? 'selected' : '' }}>Jurusan</option>
+                </select>
+            </div>
+
+            {{-- Tombol --}}
+            <div class="col-12 d-flex gap-2 pt-1">
+                <button type="submit" class="btn btn-primary btn-sm px-3">
+                    <i class="fas fa-search me-1"></i>Terapkan
                 </button>
-                <a href="{{ route('admin.presensi.report') }}" class="btn btn-secondary">
-                    <i class="fas fa-sync-alt me-1"></i>Reset
+                <a href="{{ route('admin.presensi.report') }}" class="btn btn-outline-secondary btn-sm px-3">
+                    <i class="fas fa-times me-1"></i>Reset
                 </a>
             </div>
         </form>
+
+        {{-- Active filter badges --}}
+        @php
+            $statusLabel = null;
+            if ($filterStatus) {
+                if ($filterStatus === 'izin_sakit') {
+                    $statusLabel = 'Izin atau Sakit';
+                } else {
+                    $statusLabel = ucfirst(str_replace('_', ' ', $filterStatus));
+                }
+            }
+            $activeFilters = array_filter([
+                'Status'  => $statusLabel,
+                'Kelas'   => $filterKelas   ? ($kelasList->firstWhere('id', $filterKelas)?->tingkat . '-' . $kelasList->firstWhere('id', $filterKelas)?->nama_kelas) : null,
+                'Jurusan' => $filterJurusan ? $jurusanList->firstWhere('id', $filterJurusan)?->nama_jurusan : null,
+                'Sort'    => $sortBy !== 'nama' ? 'Urut: ' . ucfirst($sortBy) : null,
+            ]);
+        @endphp
+        @if(!empty($activeFilters))
+            <div class="mt-2 d-flex flex-wrap gap-1">
+                <span class="small text-muted me-1">Filter aktif:</span>
+                @foreach($activeFilters as $label => $val)
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1">
+                        {{ $label }}: {{ $val }}
+                    </span>
+                @endforeach
+            </div>
+        @endif
     </div>
 </div>
+
 
 {{-- Tanggal yang ditampilkan --}}
 <div class="d-flex align-items-center gap-3 mb-3">
@@ -51,7 +128,6 @@
     @endif
 </div>
 
-{{-- Statistik Ringkas --}}
 @php
     $countHadir      = $presensiReport->filter(fn($r) => $r['type'] === 'presensi' && $r['presensi']->status === 'hadir')->count();
     $countIzin       = $presensiReport->filter(fn($r) => $r['type'] === 'presensi' && $r['presensi']->status === 'izin')->count();
@@ -59,43 +135,90 @@
     $countAlfa       = $presensiReport->filter(fn($r) => $r['type'] === 'presensi' && $r['presensi']->status === 'alfa')->count();
     $countBelum      = $presensiReport->filter(fn($r) => $r['type'] === 'belum_presensi')->count();
     $totalSiswa      = $presensiReport->count();
+
+    // Helper: buat URL filter cepat dengan mempertahankan parameter lain
+    $quickFilterBase = http_build_query(array_filter([
+        'tanggal'        => request('tanggal'),
+        'search'         => request('search'),
+        'filter_kelas'   => request('filter_kelas'),
+        'filter_jurusan' => request('filter_jurusan'),
+        'sort_by'        => request('sort_by'),
+    ]));
+
+    // Helper: buat URL sort dengan mempertahankan parameter filter
+    $sortUrl = function($sort) use ($selectedDate, $filterStatus, $filterKelas, $filterJurusan) {
+        return route('admin.presensi.report') . '?' . http_build_query(array_filter([
+            'tanggal'        => $selectedDate->format('Y-m-d'),
+            'search'         => request('search'),
+            'filter_status'  => $filterStatus,
+            'filter_kelas'   => $filterKelas,
+            'filter_jurusan' => $filterJurusan,
+            'sort_by'        => $sort,
+        ]));
+    };
 @endphp
-<div class="row g-3 mb-4">
+
+{{-- Statistik Ringkas — klik untuk filter cepat --}}
+<div class="row g-2 mb-3">
+    {{-- Total --}}
     <div class="col-6 col-md-2">
-        <div class="card border-0 bg-light text-center py-2">
-            <div class="fs-4 fw-bold text-dark">{{ $totalSiswa }}</div>
-            <div class="small text-muted">Total Siswa</div>
-        </div>
+        <a href="{{ route('admin.presensi.report') }}?{{ $quickFilterBase }}"
+           class="text-decoration-none">
+            <div class="card border-0 text-center py-2 h-100 {{ !$filterStatus ? 'border border-2 border-dark shadow-sm' : 'bg-light' }}">
+                <div class="fs-4 fw-bold text-dark">{{ $totalSiswa }}</div>
+                <div class="small text-muted">Semua Siswa</div>
+            </div>
+        </a>
     </div>
+    {{-- Hadir --}}
     <div class="col-6 col-md-2">
-        <div class="card border-0 bg-success bg-opacity-10 text-center py-2">
-            <div class="fs-4 fw-bold text-success">{{ $countHadir }}</div>
-            <div class="small text-muted">Hadir</div>
-        </div>
+        <a href="{{ route('admin.presensi.report') }}?{{ $quickFilterBase }}&filter_status=hadir"
+           class="text-decoration-none">
+            <div class="card border-0 text-center py-2 h-100 {{ $filterStatus === 'hadir' ? 'border border-2 border-success shadow-sm' : 'bg-success bg-opacity-10' }}">
+                <div class="fs-4 fw-bold text-success">{{ $countHadir }}</div>
+                <div class="small text-muted">Hadir</div>
+            </div>
+        </a>
     </div>
+    {{-- Izin --}}
     <div class="col-6 col-md-2">
-        <div class="card border-0 bg-warning bg-opacity-10 text-center py-2">
-            <div class="fs-4 fw-bold text-warning">{{ $countIzin }}</div>
-            <div class="small text-muted">Izin</div>
-        </div>
+        <a href="{{ route('admin.presensi.report') }}?{{ $quickFilterBase }}&filter_status=izin"
+           class="text-decoration-none">
+            <div class="card border-0 text-center py-2 h-100 {{ $filterStatus === 'izin' ? 'border border-2 border-warning shadow-sm' : 'bg-warning bg-opacity-10' }}">
+                <div class="fs-4 fw-bold text-warning">{{ $countIzin }}</div>
+                <div class="small text-muted">Izin</div>
+            </div>
+        </a>
     </div>
+    {{-- Sakit --}}
     <div class="col-6 col-md-2">
-        <div class="card border-0 bg-info bg-opacity-10 text-center py-2">
-            <div class="fs-4 fw-bold text-info">{{ $countSakit }}</div>
-            <div class="small text-muted">Sakit</div>
-        </div>
+        <a href="{{ route('admin.presensi.report') }}?{{ $quickFilterBase }}&filter_status=sakit"
+           class="text-decoration-none">
+            <div class="card border-0 text-center py-2 h-100 {{ $filterStatus === 'sakit' ? 'border border-2 border-info shadow-sm' : 'bg-info bg-opacity-10' }}">
+                <div class="fs-4 fw-bold text-info">{{ $countSakit }}</div>
+                <div class="small text-muted">Sakit</div>
+            </div>
+        </a>
     </div>
+    {{-- Alfa --}}
     <div class="col-6 col-md-2">
-        <div class="card border-0 bg-danger bg-opacity-10 text-center py-2">
-            <div class="fs-4 fw-bold text-danger">{{ $countAlfa }}</div>
-            <div class="small text-muted">Alfa</div>
-        </div>
+        <a href="{{ route('admin.presensi.report') }}?{{ $quickFilterBase }}&filter_status=alfa"
+           class="text-decoration-none">
+            <div class="card border-0 text-center py-2 h-100 {{ $filterStatus === 'alfa' ? 'border border-2 border-danger shadow-sm' : 'bg-danger bg-opacity-10' }}">
+                <div class="fs-4 fw-bold text-danger">{{ $countAlfa }}</div>
+                <div class="small text-muted">Alfa</div>
+            </div>
+        </a>
     </div>
+    {{-- Belum Presensi --}}
     <div class="col-6 col-md-2">
-        <div class="card border-0 bg-secondary bg-opacity-10 text-center py-2">
-            <div class="fs-4 fw-bold text-secondary">{{ $countBelum }}</div>
-            <div class="small text-muted">Belum Presensi</div>
-        </div>
+        <a href="{{ route('admin.presensi.report') }}?{{ $quickFilterBase }}&filter_status=belum_presensi"
+           class="text-decoration-none">
+            <div class="card border-0 text-center py-2 h-100 {{ $filterStatus === 'belum_presensi' ? 'border border-2 border-secondary shadow-sm' : 'bg-secondary bg-opacity-10' }}">
+                <div class="fs-4 fw-bold text-secondary">{{ $countBelum }}</div>
+                <div class="small text-muted">Belum Presensi</div>
+            </div>
+        </a>
     </div>
 </div>
 
@@ -112,13 +235,33 @@
                 <thead class="table-light presensi-report-thead">
                     <tr>
                         <th width="4%" class="text-center">No</th>
-                        <th width="20%" class="text-start">Nama Siswa</th>
-                        <th width="13%" class="text-start">Tempat Mitra</th>
+                        <th width="24%" class="text-start">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <a href="{{ $sortUrl('nama') }}" class="text-dark text-decoration-none fw-bold me-2">
+                                    Nama Siswa
+                                    <i class="fas {{ $sortBy === 'nama' ? 'fa-sort-alpha-down text-primary' : 'fa-sort text-muted opacity-50' }} ms-1"></i>
+                                </a>
+                                <div class="d-flex gap-1">
+                                    <a href="{{ $sortUrl('kelas') }}" class="badge bg-light text-secondary border {{ $sortBy === 'kelas' ? 'border-primary text-primary bg-primary bg-opacity-10' : '' }} text-decoration-none font-weight-normal py-1 px-2" style="font-size: 0.72rem;">
+                                        Kelas <i class="fas fa-sort-amount-down {{ $sortBy === 'kelas' ? 'text-primary' : 'text-muted opacity-50' }} ms-1"></i>
+                                    </a>
+                                    <a href="{{ $sortUrl('jurusan') }}" class="badge bg-light text-secondary border {{ $sortBy === 'jurusan' ? 'border-primary text-primary bg-primary bg-opacity-10' : '' }} text-decoration-none font-weight-normal py-1 px-2" style="font-size: 0.72rem;">
+                                        Jurusan <i class="fas fa-sort-amount-down {{ $sortBy === 'jurusan' ? 'text-primary' : 'text-muted opacity-50' }} ms-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </th>
+                        <th width="11%" class="text-start">Tempat Mitra</th>
                         <th width="8%" class="text-center">Jam Masuk</th>
                         <th width="8%" class="text-center">Jam Keluar</th>
-                        <th width="13%" class="text-center">Koordinat</th>
+                        <th width="12%" class="text-center">Koordinat</th>
                         <th width="8%" class="text-center">Kecocokan</th>
-                        <th width="13%" class="text-center">Status</th>
+                        <th width="12%" class="text-center">
+                            <a href="{{ $sortUrl('status') }}" class="text-dark text-decoration-none d-flex align-items-center justify-content-center gap-1">
+                                <span class="fw-bold">Status</span>
+                                <i class="fas {{ $sortBy === 'status' ? 'fa-sort-amount-down text-primary' : 'fa-sort text-muted opacity-50' }} small"></i>
+                            </a>
+                        </th>
                         <th width="7%" class="text-center">Bukti</th>
                         <th width="6%" class="text-center">Aksi</th>
                     </tr>
@@ -329,14 +472,20 @@
                     <div id="tambahJamGroup" class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label fw-semibold small">Jam Masuk</label>
-                            <input type="time" name="jam_masuk" id="tambahJamMasuk" class="form-control">
+                            <input type="text" name="jam_masuk" id="tambahJamMasuk" class="form-control"
+                                   placeholder="Contoh: 08:00" maxlength="5"
+                                   pattern="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+                                   title="Format waktu 24 jam (HH:MM), contoh: 08:30 atau 17:00">
                         </div>
                         <div class="col-6">
                             <label class="form-label fw-semibold small">Jam Keluar</label>
-                            <input type="time" name="jam_keluar" id="tambahJamKeluar" class="form-control">
+                            <input type="text" name="jam_keluar" id="tambahJamKeluar" class="form-control"
+                                   placeholder="Contoh: 16:00" maxlength="5"
+                                   pattern="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+                                   title="Format waktu 24 jam (HH:MM), contoh: 08:30 atau 17:00">
                         </div>
                         <div class="col-12">
-                            <small class="text-muted">Opsional — isi jika perlu mencatat jam</small>
+                            <small class="text-muted">Format 24 jam (HH:MM) — Opsional</small>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -390,14 +539,20 @@
                     <div id="jamGroup" class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label fw-semibold small">Jam Masuk</label>
-                            <input type="time" name="jam_masuk" id="editJamMasuk" class="form-control">
+                            <input type="text" name="jam_masuk" id="editJamMasuk" class="form-control"
+                                   placeholder="Contoh: 08:00" maxlength="5"
+                                   pattern="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+                                   title="Format waktu 24 jam (HH:MM), contoh: 08:30 atau 17:00">
                         </div>
                         <div class="col-6">
                             <label class="form-label fw-semibold small">Jam Keluar</label>
-                            <input type="time" name="jam_keluar" id="editJamKeluar" class="form-control">
+                            <input type="text" name="jam_keluar" id="editJamKeluar" class="form-control"
+                                   placeholder="Contoh: 16:00" maxlength="5"
+                                   pattern="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+                                   title="Format waktu 24 jam (HH:MM), contoh: 08:30 atau 17:00">
                         </div>
                         <div class="col-12">
-                            <small class="text-muted">Opsional — isi jika perlu menyesuaikan jam presensi</small>
+                            <small class="text-muted">Format 24 jam (HH:MM) — Opsional</small>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -527,6 +682,46 @@ document.getElementById('editStatus')?.addEventListener('change', function () {
 document.getElementById('tambahStatus')?.addEventListener('change', function () {
     toggleJamGroup(this.value, 'tambahJamGroup');
 });
+
+// Auto-format input jam ke format 24 jam (HH:MM)
+function setupTimeAutoFormat(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', function (e) {
+        let val = e.target.value.replace(/[^0-9]/g, '');
+        if (val.length > 4) val = val.substring(0, 4);
+        if (val.length > 2) {
+            e.target.value = val.substring(0, 2) + ':' + val.substring(2);
+        } else {
+            e.target.value = val;
+        }
+    });
+    el.addEventListener('blur', function (e) {
+        let val = e.target.value;
+        if (val && !val.includes(':') && val.length === 4) {
+            e.target.value = val.substring(0, 2) + ':' + val.substring(2);
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    setupTimeAutoFormat('tambahJamMasuk');
+    setupTimeAutoFormat('tambahJamKeluar');
+    setupTimeAutoFormat('editJamMasuk');
+    setupTimeAutoFormat('editJamKeluar');
+});
+
+// Re-run setup on modal load just to be safe
+const modals = ['tambahPresensiModal', 'editStatusModal'];
+modals.forEach(modalId => {
+    document.getElementById(modalId)?.addEventListener('shown.bs.modal', function () {
+        setupTimeAutoFormat('tambahJamMasuk');
+        setupTimeAutoFormat('tambahJamKeluar');
+        setupTimeAutoFormat('editJamMasuk');
+        setupTimeAutoFormat('editJamKeluar');
+    });
+});
 </script>
 @endpush
+
 @endsection
